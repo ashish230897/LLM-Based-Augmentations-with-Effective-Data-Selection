@@ -61,6 +61,8 @@ tokenizer_name="xlm-roberta-large"
 #--do_train \
   #--do_eval \
 
+seed=42
+
 python $PWD/train_xlmr/run_classify.py \
   --model_type $MODEL_TYPE \
   --tokenizer_name $tokenizer_name \
@@ -85,6 +87,7 @@ python $PWD/train_xlmr/run_classify.py \
   --save_only_best_checkpoint \
   --overwrite_output_dir \
   --eval_test_set $LC \
+  --seed $seed
   # --temperature 10
 
  
