@@ -36,7 +36,7 @@ class ModelArguments:
     # Base model parameters
     model_name_or_path: Optional[str] = field(default="bigscience/mt0-large")
     
-    load_in_8bit: bool = field(
+    load_in_4bit: bool = field(
                 default=False, metadata={"help": "Whether to convert the loaded model into mixed-8bit quantized model."}
     )
 
@@ -59,12 +59,16 @@ class DataArguments:
 
 def train_model(train_df, test_df):
 
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_type=model_args.bnb_4bit_quant_type,
-        bnb_4bit_compute_dtype=torch.bfloat16
-    )
+    bnb_config = None
+    if model_args.load_in_4bit:
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_quant_type=model_args.bnb_4bit_quant_type,
+            bnb_4bit_compute_dtype=torch.bfloat16
+        )
+
+    print("quantization config is ", bnb_config)
 
     model = AutoModelForCausalLM.from_pretrained(
             model_args.model_name_or_path,
@@ -110,9 +114,10 @@ def train_model(train_df, test_df):
         args=training_args,
     )
 
-    for name, module in trainer.model.named_modules():
-        if "norm" in name:
-            module = module.to(torch.float32)
+    if model_args.load_in_4bit:
+        for name, module in trainer.model.named_modules():
+            if "norm" in name:
+                module = module.to(torch.float32)
 
     
     # start training
@@ -130,7 +135,16 @@ def main():
 
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
-    
+
+    print("Arguments are: ")
+    print(model_args)
+    print()
+    print(data_args)
+    print()
+    print(training_args)
+    print()
+
+
     # create output dir if it does not exists
     if not os.path.exists(training_args.output_dir):
         os.makedirs(training_args.output_dir)

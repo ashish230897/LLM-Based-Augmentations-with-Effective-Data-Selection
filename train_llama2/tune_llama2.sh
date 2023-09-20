@@ -6,11 +6,14 @@ device_map="auto"
 lora_alpha=32
 lora_dropout=0.05
 lora_r=8
+# lora_alpha=4
+# lora_dropout=0.7
+# lora_r=4
 bnb_4bit_quant_type="nf4"
 
 # data args
-max_seq_length=512
-file_path="${curr_dir}/data/bnsentiment/train-en_texts.csv"
+max_seq_length=128  # this param depends on the size of texts in the fine-tuning data
+file_path="${curr_dir}/data/sst5/train-en_texts.csv"
 
 # training args
 per_device_train_batch_size=16
@@ -24,14 +27,12 @@ max_grad_norm=0.3
 warmup_ratio=0.03
 lr_scheduler_type="constant"
 num_train_epochs=10
-output_dir="${curr_dir}/results/llama2/bnsentiment_entraineostokenfp16/"
+output_dir="${curr_dir}/results/llama2/sst5_wfp164bit_8alphs/"
 save_total_limit=1
 evaluation_strategy="steps"
 metric_for_best_model="eval_loss"
 
 # --group_by_length \
-# --optim $optim \
-# --fp16 \
 
 python ${curr_dir}/train_llama2/tune_llama2.py \
     --model_name_or_path $model_name \
@@ -43,7 +44,6 @@ python ${curr_dir}/train_llama2/tune_llama2.py \
     --output_dir $output_dir \
     --per_device_train_batch_size $per_device_train_batch_size \
     --gradient_accumulation_steps $gradient_accumulation_steps \
-    --optim $optim \
     --save_steps $save_steps \
     --eval_steps $eval_steps \
     --logging_steps $logging_steps \
@@ -59,5 +59,7 @@ python ${curr_dir}/train_llama2/tune_llama2.py \
     --metric_for_best_model $metric_for_best_model \
     --group_by_length \
     --file_path $file_path \
-    --fp16
+    --load_in_4bit \
+    --fp16 \
+    --optim $optim
     
