@@ -12,15 +12,16 @@ PRETRAINED_TOKENIZER="xlm-roberta-large"
 MODEL_TYPE="xlmr"
 # MODEL_TYPE="bert"
 
-LANG=$1
-SEED=$2
+OUT_DIR_NAME=$1
+train_file=$2
+valid_file=$3
 
-OUT_DIR="$BASE/pre-training/output_target${SEED}${LANG}"
+OUT_DIR="$BASE/pre-training/${OUT_DIR_NAME}"
 mkdir -p $OUT_DIR
 
-MLM_TRAIN_FILE="$BASE/data/xnli/pretraining/pretrain.target.${LANG}.proc.seed${SEED}train"
+MLM_TRAIN_FILE=$train_file
 echo "train file is $MLM_TRAIN_FILE"
-MLM_EVAL_FILE="$BASE/data/xnli/pretraining/pretrain.target.${LANG}.proc.seed${SEED}valid"
+MLM_EVAL_FILE=$valid_file
 
 # export NVIDIA_VISIBLE_DEVICES=1
 # export CUDA_VISIBLE_DEVICES=1
