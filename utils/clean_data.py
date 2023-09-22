@@ -7,13 +7,15 @@ def remove_whitespace(text):
     return  " ".join(text.split())
 
 
-
 def main(input_path, output_path):
 
     df = pd.read_csv(input_path)
     texts = list(df["Texts"])
 
-    #text = "I'm not a Bengali, but I've heard a lot about you.  30 minutes of video, 15 minutes for the title, the rest for ads."
+    print(texts[0])
+
+    texts = [text for text in texts if type(text) == str]
+    
     texts = [''.join([i if ord(i) < 128 else '' for i in text]) for text in texts]
     texts = [remove_whitespace(text) for text in texts]
     texts = [re.sub(r'\d+\.\s+', '', text) for text in texts]  # remove full 2. in middle of texts
