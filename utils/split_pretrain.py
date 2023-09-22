@@ -4,8 +4,8 @@ import argparse
 
 repo_path = os.getcwd()
 
-def preprocess(seed, lang):
-    data_path = repo_path + "/data/xnli/pretraining/pretrain_target_{}_seed{}.txt".format(lang, seed)
+def preprocess(file_path):
+    data_path = file_path
     
     file = open(data_path)
     lines = list(file.readlines())
@@ -16,12 +16,12 @@ def preprocess(seed, lang):
     train = lines[0:int(0.9*len(lines))]
     valid = lines[int(0.9*len(lines)):]
     
-    file = open(repo_path + "/data/xnli/pretraining/pretrain.target.{}.seed{}train".format(lang, seed), "w+")
+    file = open(file_path + ".train", "w+")
     for line in train:
         file.write(line.strip().replace("\n", "") + "\n")
     file.close()
 
-    file = open(repo_path + "/data/xnli/pretraining/pretrain.target.{}.seed{}valid".format(lang, seed), "w+")
+    file = open(file_path + ".valid", "w+")
     for line in valid:
         file.write(line.strip().replace("\n", "") + "\n")
     file.close()
@@ -33,12 +33,11 @@ def main():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--seed", type=int, required=True)
-    parser.add_argument("--lang", type=str, required=True)
+    parser.add_argument("--file_path", type=str, required=True)
 
     args = parser.parse_args()
 
-    preprocess(args.seed, args.lang)
+    preprocess(args.file_path)
 
 
 if __name__ == "__main__":
