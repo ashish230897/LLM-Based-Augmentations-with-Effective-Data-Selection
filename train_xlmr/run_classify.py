@@ -51,6 +51,7 @@ from processors.xnli import XnliProcessor
 from processors.bnsentiment import BnSentimentProcessor
 from processors.mlheadline import MlHeadlineProcessor
 from processors.hiproduct import HiProductProcessor
+from processors.sst5 import SST5Processor
 
 try:
   from torch.utils.tensorboard import SummaryWriter
@@ -70,7 +71,8 @@ PROCESSORS = {
   'xnli': XnliProcessor,
   'bnsentiment': BnSentimentProcessor,
   'mlheadline': MlHeadlineProcessor,
-  'hiproduct': HiProductProcessor
+  'hiproduct': HiProductProcessor,
+  'sst5': SST5Processor
 }
 
 
@@ -110,6 +112,7 @@ def compute_metrics(preds, labels):
 
 
 def set_seed(args):
+  print("Current seed is ---------------> {}".format(args.seed))
   random.seed(args.seed)
   np.random.seed(args.seed)
   torch.manual_seed(args.seed)
