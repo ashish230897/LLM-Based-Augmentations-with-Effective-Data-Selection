@@ -305,6 +305,57 @@ def generate_domainaware_bnsentiment():
     df = pd.DataFrame(generations_dict)
     df.to_csv("{}/results/generations_label_sst5chat_7bquantized.csv".format(repo_path), index=False)
 
+def generate_domainaware_mnli():
+
+    total_generations = 200000
+    
+    domains = {"politics": int(0.2*total_generations), "sports": int(0.1*total_generations), "food": int(0.1*total_generations), 
+               "entertainment": int(0.1*total_generations), 
+               "lifestyle": int(0.1*total_generations), "education": int(0.1*total_generations), 
+               "travelling": int(0.1*total_generations), "fashion": int(0.1*total_generations), 
+               "agriculture": int(0.1*total_generations)}
+    
+    labels = []
+    for domain,count in domains.items():
+
+        pos_prompt = "<s>[INST] <<SYS>>\nYour job is to comment on news from {}.\n<</SYS>>\n\nPlease share a review in one sentence expressing a positive sentiment. Please only share the review sentence without any additional content before or after. Please make sure the review is a meaningful sentence.[/INST]".format(domain)
+        neg_prompt = "<s>[INST] <<SYS>>\nYour job is to comment on news from {}.\n<</SYS>>\n\nPlease share a review in one sentence expressing a negative sentiment. Please only share the review sentence without any additional content before or after. Please make sure the review is a meaningful sentence.[/INST]".format(domain)
+        neu_prompt = "<s>[INST] <<SYS>>\nYour job is to comment on news from {}.\n<</SYS>>\n\nPlease share a review in one sentence expressing a neutral sentiment. Please only share the review sentence without any additional content before or after. Please make sure the review is a meaningful sentence.[/INST]".format(domain)
+
+        labels += [pos_prompt, neg_prompt, neu_prompt]*(int(count/3))
+    
+    #print(labels)
+
+    print("Length of labels is {}".format(len(labels)))
+    batch_size = 200
+    num_batches = int(total_generations/batch_size)
+    generations = []
+
+    for i in tqdm(range(num_batches)):
+        if i == num_batches - 1:
+            texts = labels[i*batch_size:]
+        else:
+            texts = labels[i*batch_size: i*batch_size + batch_size]
+
+        t1 = time.time()
+        device = torch.device("cuda")
+        inputs = tokenizer(texts, return_tensors="pt", padding=True).to(device)
+
+        set_seed(i)
+        outputs = model.generate(input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"], max_length=128, do_sample=True, top_p=0.9, num_return_sequences=1,
+            eos_token_id=tokenizer.eos_token_id, remove_invalid_values=True, no_repeat_ngram_size=2, temperature=1.5)
+        print("Lenght of outputs is ", len(outputs))
+        print("Time taken is ---- {}".format(time.time() - t1))
+
+        for seq in outputs:
+            text = tokenizer.decode(seq, skip_special_tokens=True)
+            
+            generations.append(text)
+
+    generations_dict = {"Texts": generations}
+    df = pd.DataFrame(generations_dict)
+    df.to_csv("{}/results/generations_label_sst5chat_7bquantized.csv".format(repo_path), index=False)
+
 
 def generate_labelaware_mlheadline():
 
@@ -414,18 +465,17 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--saved_path", type=str, required=False)
-    parser.add_argument("--task", type=str, required=True)
+    parser.add_argument("--task", type=str, required=False)
     parser.add_argument("--load_finetuned", action="store_true")
-    
-    base_model = "meta-llama/Llama-2-7b-chat-hf"
+    parser.add_argument("--base_model", type=str)
 
     args = parser.parse_args()
+    # base_model = "meta-llama/Llama-2-7b-chat-hf"
+    base_model = args.base_model    
 
     saved_path = args.saved_path
-
-    # print("saved path is ", saved_path)
-
-    # config = PeftConfig.from_pretrained(saved_path)
+    if saved_path is not None:
+        config = PeftConfig.from_pretrained(saved_path)
 
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
@@ -433,8 +483,6 @@ def main():
         bnb_4bit_quant_type="nf4",
         bnb_4bit_compute_dtype=torch.bfloat16
     )
-
-    # print("base model name is ", config.base_model_name_or_path)
     
     model = AutoModelForCausalLM.from_pretrained(
             base_model,
@@ -448,41 +496,23 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(base_model, trust_remote_code=True, use_auth_token="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")
     tokenizer.pad_token = tokenizer.eos_token
 
-    # print("Model before peft loading")
-    # print(model)
-    # print()
-
     # Load the LoRA model
     if args.load_finetuned:
         inference_model = PeftModel.from_pretrained(model, saved_path)
-    # print("Inference model is: ")
-    # print(inference_model)
-    # print()
 
-    # print("Model after inplace loading is ")
-    # print(model)
-    # print()
+    #prompt = "<s>[INST] <<SYS>>\nYour job is to comment on news from politics.\n<</SYS>>\n\nPlease generate a premise and a hypothesis pair with an entailment relation between them as follows:\npremise: How do you know? All this is their information again.\nhypothesis: This information belongs to them.\npremise: [/INST]"
+    #prompt = "<s>[INST] <<SYS>>\nYour job is to comment on news from politics.\n<</SYS>>\n\nPremise: How do you know? All this is their information again.\nHypothesis: This information belongs to them.\nPremise: You have access to the facts.\nHypothesis: The facts are accessible to you.\nPremise:[/INST]"
+    # prompt = "<s>[INST] Please generate one pair of two sentences that entail each other as follows:\nsent1: How do you know? All this is their information again.\nsent2: This information belongs to them.\nsent1: You have access to the facts.\nsent2: The facts are accessible to you.\nsent1: We stink all the time.\nsent2: We always stink.[/INST]"
+    # prompt = "<s>[INST] Please generate two sentences separated by <sep> token such that they entail each other as follows:\nHow do you know? All this is their information again. <sep> This information belongs to them.\nYou have access to the facts. <sep> The facts are accessible to you.\nWe stink all the time. <sep> We always stink.[/INST]"
+    # prompt = "<s>[INST] The opening date of the station was estimated to be mid-2020. In other words, [/INST]"
+    prompt = "<s> The opening date of the station was estimated to be mid-2020. In other words, "
 
-    # generate_pipeline()
-    # generate_generate()
-
-    #prompt = "<s>[INST] <<SYS>>\nYou are a user commenting on the politics domain\n<</SYS>>\n\nGenerate a negative sentiment sentence inside curly braces [/INST]"
-    #prompt = "<s>[INST] <<SYS>>\nYou are a user commenting on the politics domain\n<</SYS>>\n\n{} sentiment sentence is: [/INST]"
-    #prompt = "<s>[INST] <<SYS>>\nYou are a user commenting on the politics domain, just give the answer without telling anything else\n<</SYS>>\n\n{} sentiment sentence is: [/INST]"
-    #prompt = "<s>[INST] <<SYS>>\nYou are a user commenting on the politics domain, just give the answer without telling anything else\n<</SYS>>\n\nPlease generate a sentence indicating a {} sentiment.\nSentence: [/INST]"
-    # prompt = '<s>[INST] <<SYS>>\nYou are a user who likes commenting on the politics news\n<</SYS>>\n\nPlease generate a single sentence indicating a {} sentiment as in the example below:\nSentence: "Today the weather is very good."\nSentence: [/INST]'
-    prompt = "<s>[INST] <<SYS>>\nYour job is to comment on news from politics.\n<</SYS>>\n\nPlease share a review in one sentence expressing a positive sentence. Please only share the review sentence without any additional response before or after. Please make sure the review is a meaningful sentence.[/INST]"
-
-    # prompt = "<s>[INST] <<SYS>>\nYou are a user commenting on the politics domain\n<</SYS>>\n\nGenerate a negative sentiment sentence [/INST]"
-    # generate_text([prompt])
-
-    # prompt = "<s>[INST] <<SYS>>\nYou are a user commenting on the politics domain\n<</SYS>>\n\nGenerate a positive sentiment sentence [/INST]"
-    # generate_text([prompt])
+    generate_text([prompt])
 
     # generate_text([prompt.format("Negative")])
     # generate_text([prompt.format("positive")])
     # generate_text([prompt.format("Neutral")])
-    # exit()
+    exit()
     # generate_text(["contradiction \n"])
     # generate_text(["neutral \n"])
 
