@@ -20,34 +20,62 @@ def form_data(lang, seed, size):
         file.write(pre + " " + hypos[i] + "\n")
     file.close()
 
+def form_data_clss(input_path):
+    data_path = input_path
+    file = open(data_path)
+    lines = file.readlines()
+
+    texts = []
+    for line in lines:
+        text = line.split("\t")[0].strip().replace("\n", "")
+        texts.append(text)
+
+    file = open(input_path + ".pretrain", "w+")
+    for i,text in enumerate(texts):
+        file.write(text + "\n")
+    file.close()
+
+
 def main():
 
     parser = argparse.ArgumentParser()
 
-    # Required parameters
+    parser.add_argument(
+        "--task",
+        type=str,
+        required=True
+    )
+    
     parser.add_argument(
         "--seed",
         type=int,
-        required=True
+        required=False
     )
 
     parser.add_argument(
         "--size",
         type=int,
-        required=True
+        required=False
     )
 
     parser.add_argument(
         "--lang",
         type=str,
-        required=True
+        required=False
+    )
+
+    parser.add_argument(
+        "--input_path",
+        type=str,
+        required=False
     )
 
     args = parser.parse_args()
 
-    form_data(args.lang, args.seed, args.size)
-
-
+    if args.task == "xnli":
+        form_data(args.lang, args.seed, args.size)
+    elif args.task == "bnsentiment" or args.task == "mlheadline" or args.task == "hiproduct":
+        form_data_clss(args.input_path)
 
 
 if __name__ == "__main__":
