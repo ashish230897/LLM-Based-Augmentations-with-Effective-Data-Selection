@@ -40,14 +40,18 @@ def main(input_path, output_path):
     print("Pattern to remove 2. at the end of strings is", pattern)
     texts = [re.sub(pattern, r'\1', text) for text in texts]  # remove 2. etc at the end of strings
 
+    # replace continuous punctuations with a single punctuation
+    pattern = r'([^\w\s])\1+'
+    texts = [re.sub(pattern, r'\1', text) for text in texts]
+
+    pattern = r'^[^a-zA-Z]+'
+    # Use re.sub to replace the matched prefix with an empty string
+    texts = [re.sub(pattern, '', text) for text in texts]
+
     # pick texts having length > 4
     texts = [text for text in texts if len(text) > 17]
 
     texts = list(set(texts))
-
-    # replace continuous punctuations with a single punctuation
-    pattern = r'([^\w\s])\1+'
-    texts = [re.sub(pattern, r'\1', text) for text in texts]
 
     # replace two dots with a single dot
     
@@ -70,6 +74,7 @@ def process_xnli(args):
     pattern_3 = r'([\w])([?.!,%])\s*([\w\d])'
     pattern_4 = r'([' + punctuation_chars + r'])\s+\d+\.'
     pattern_5 = r'([^\w\s])\1+'
+    pattern_6 = r'^[^a-zA-Z]+'
 
 
     new_premises, new_hypos, new_labels = [], [], []
@@ -96,12 +101,16 @@ def process_xnli(args):
 
         hyp = re.sub(pattern_4, r'\1', hyp)  # remove 2. etc at the end of strings
 
+        # replace continuous punctuations with a single punctuation
+        hyp = re.sub(pattern_5, r'\1', hyp)
+    
+        # Use re.sub to replace the matched prefix with an empty string
+        hyp = re.sub(pattern_6, '', hyp)
+
         # pick texts having length > 17
         if len(hyp) <= 17:
             continue
 
-        # replace continuous punctuations with a single punctuation
-        hyp = re.sub(pattern_5, r'\1', hyp)
 
         new_premises.append(pre.strip().replace("\n", ""))
         new_hypos.append(hyp.strip().replace("\n", ""))
