@@ -20,12 +20,12 @@ OUT_DIR="$REPO/results/"
 
 LANG=$2
 saved_model=$3
-OUTPUT_MODEL_NAME=$4
-TASK=$5
-seed=$6
+TASK=$4
+seed=$5
 
 LR=2e-5
 EPOCH=15
+# EPOCH=1
 MAXL=128
 LANGS="${LANG}"
 LC=""
@@ -39,8 +39,8 @@ elif [ $MODEL == "xlm-roberta-large" ] || [ $MODEL == "xlm-roberta-base" ]; then
 fi
 
 if [ $MODEL == "xlm-mlm-100-1280" ] || [ $MODEL == "xlm-roberta-large" ]; then
-  BATCH_SIZE=32
-  GRAD_ACC=4
+  BATCH_SIZE=5
+  GRAD_ACC=6
   #GRAD_ACC=2
   #LR=3e-5
   LR=5e-6
@@ -50,8 +50,7 @@ else
   LR=2e-5
 fi
 
-SAVE_DIR="$OUT_DIR/$TASK/${OUTPUT_MODEL_NAME}/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}/"
-mkdir -p $SAVE_DIR
+SAVE_DIR=$saved_model
 
 tokenizer_name="xlm-roberta-large"
 
@@ -62,7 +61,6 @@ python $PWD/train_xlmr/run_classify.py \
   --train_language ${LANG} \
   --dev_language ${LANG} \
   --task_name $TASK \
-  --do_train \
   --do_eval \
   --do_predict \
   --data_dir $DATA_DIR/${TASK} \
