@@ -25,7 +25,7 @@ def generate_fewshot(pos_prompt, neg_prompt, neu_prompt):
     print(len(labels))
 
     print("Length of labels is {}".format(len(labels)))
-    batch_size = 50
+    batch_size = 70
     num_batches = int(len(labels)/batch_size)
     generations = []
 
