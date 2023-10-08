@@ -28,7 +28,7 @@ MLM_EVAL_FILE=$valid_file
 
 MLM_PROB=0.3
 EPOCH=20
-BATCH_SIZE=16  # set to match the exact GLUECOS repo
+BATCH_SIZE=8  # set to match the exact GLUECOS repo
 MAX_SEQ=256
 GRAD_STEPS=5
 
