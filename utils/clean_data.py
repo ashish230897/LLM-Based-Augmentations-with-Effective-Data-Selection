@@ -51,11 +51,16 @@ def main(input_path, output_path):
     # pick texts having length > 4
     texts = [text for text in texts if len(text) > 17]
 
-    texts = list(set(texts))
+    #texts = list(set(texts))
+    dict = {}
+    new_texts = []
 
-    # replace two dots with a single dot
+    for text in texts:
+        if text not in dict:
+            dict[text] = 1
+            new_texts.append(text)
     
-    new_df = pd.DataFrame({"Texts": texts})
+    new_df = pd.DataFrame({"Texts": new_texts})
     new_df.to_csv(output_path, index=False)
 
 
@@ -123,6 +128,70 @@ def process_xnli(args):
     new_df.to_csv(args.output_path, index=False)
 
 
+def process_labeled(args):
+
+    df = pd.read_csv(args.input_path)
+    texts = list(df["Texts"])
+    labels = list(df["Labels"])
+
+    punctuation_chars = re.escape(string.punctuation)
+    pattern_1 = r'\s*([' + punctuation_chars + r'])\s*'
+    pattern_2 = r'([\d])([' + punctuation_chars + r'])\s*([^0-9])'
+    pattern_3 = r'([\w])([?.!,%])\s*([\w\d])'
+    pattern_4 = r'([' + punctuation_chars + r'])\s+\d+\.'
+    pattern_5 = r'([^\w\s])\1+'
+    pattern_6 = r'^[^a-zA-Z]+'
+
+    new_texts, new_labels = [], []
+
+    for i,text in enumerate(texts):
+        
+        if type(text) != str:
+            continue
+
+        text = ''.join([i if ord(i) < 128 else '' for i in text])
+        text = remove_whitespace(text)
+        text = re.sub(r'\d+\.\s+', '', text)        
+        
+        text = re.sub(pattern_1, r'\1', text)  # remove spaces between punctuations
+        text = re.sub(pattern_2, r'\1\2 \3', text)
+
+        text = re.sub(pattern_3, r'\1\2 \3', text)
+
+        text = re.sub(pattern_4, r'\1', text)  # remove 2. etc at the end of strings
+
+        # replace continuous punctuations with a single punctuation
+        text = re.sub(pattern_5, r'\1', text)
+    
+        # Use re.sub to replace the matched prefix with an empty string
+        text = re.sub(pattern_6, '', text)
+
+        # pick texts having length > 17
+        if len(text) <= 17:
+            continue
+
+
+        new_texts.append(text.strip().replace("\n", ""))
+        new_labels.append(labels[i])
+    
+    # get rid of the duplicate sentences
+    dict = {}
+    texts = []
+    labels = []
+
+    for i,text in enumerate(new_texts):
+        if text not in dict:
+            dict[text] = 1
+            texts.append(text)
+            labels.append(new_labels[i])
+
+    assert len(texts) == len(labels)
+
+    new_df = pd.DataFrame({"Texts": texts, "Labels": labels})
+    new_df.to_csv(args.output_path, index=False)
+
+
+
 def test(texts):
 
     texts = [''.join([i if ord(i) < 128 else ' ' for i in text]) for text in texts]
@@ -171,5 +240,7 @@ if __name__ == "__main__":
     
     if args.task == "xnli":
         process_xnli(args)
+    elif args.task == "hiproductlabeled":
+        process_labeled(args)
     else:
         main(args.input_path, args.output_path)
