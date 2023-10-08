@@ -53,6 +53,77 @@ def bnsentiment_postprocess(args):
     df_new.to_csv(args.output_path, index=False)
 
 
+def bnsentiment_postprocesslabeled(args):
+
+    df = pd.read_csv(args.input_path)
+    texts = list(df["Texts"])
+
+    labels = []
+
+
+    new_texts = []
+    for i,text in enumerate(texts):
+        if i%3 == 0:
+            labels.append("positive")
+        elif i%3 == 1:
+            labels.append("negative")
+        elif i%3 == 2:
+            labels.append("neutral")
+        
+        text = text.split('[/INST]')[1]
+        if ":" in text:
+            text = text.split(":")[-1]
+
+        if '"' in text:
+            text = text.split('"')[1]
+        
+        new_texts.append(text)
+    
+    texts_v2 = []
+    for text in new_texts:
+        if text.startswith("Review"):
+            texts_v2.append(text[len("Review"):])
+        else:
+            texts_v2.append(text)
+
+    assert len(texts_v2) == len(labels) == len(texts)
+
+    dict = {"Texts": texts_v2, "Labels": labels}
+    df_new = pd.DataFrame(dict)
+    df_new.to_csv(args.output_path, index=False)
+
+def postprocess_labeled(args):
+
+    df = pd.read_csv(args.input_path)
+    texts, labels = list(df["Texts"]), list(df["Labels"])
+
+    new_texts = []
+    
+    for text in texts:
+        
+        text = text.split('[/INST]')[1]
+        if ":" in text:
+            text = text.split(":")[-1]
+
+        if '"' in text:
+            text = text.split('"')[1]
+        
+        new_texts.append(text)
+    
+    texts_v2 = []
+    for text in new_texts:
+        if text.startswith("Review"):
+            texts_v2.append(text[len("Review"):])
+        else:
+            texts_v2.append(text)
+
+    assert len(texts_v2) == len(labels) == len(texts)
+
+    dict = {"Texts": texts_v2, "Labels": labels}
+    df_new = pd.DataFrame(dict)
+    df_new.to_csv(args.output_path, index=False)
+
+
 def xnli_postprocess(args):
 
     df = pd.read_csv(args.input_path)
@@ -99,7 +170,10 @@ def main():
         xnli_postprocess(args)
     elif args.task == "bnsentiment" or args.task == "hiproduct":
         bnsentiment_postprocess(args)
-
+    elif args.task == "hiproductunlabeled":
+        bnsentiment_postprocesslabeled(args)
+    elif args.task == "hiproductLabeled":
+        postprocess_labeled(args)
 
 
 
