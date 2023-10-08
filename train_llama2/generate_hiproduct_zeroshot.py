@@ -18,22 +18,23 @@ model = None
 
 def generate_zeroshot(pos_prompt, neg_prompt, neu_prompt):
 
-    num_generations = 200000
+    num_generations = 250000
 
-    labels = [pos_prompt, neg_prompt, neu_prompt]*int(num_generations/3)
+    label_prompts = [pos_prompt, neg_prompt, neu_prompt, neu_prompt]*int(num_generations/4)
+    labels = ["positive", "negative", "neutral", "neutral"]*int(num_generations/4)
     
     print(len(labels))
 
     print("Length of labels is {}".format(len(labels)))
-    batch_size = 50
+    batch_size = 70
     num_batches = int(len(labels)/batch_size)
     generations = []
 
     for i in tqdm(range(num_batches)):
         if i == num_batches - 1:
-            texts = labels[i*batch_size:]
+            texts = label_prompts[i*batch_size:]
         else:
-            texts = labels[i*batch_size: i*batch_size + batch_size]
+            texts = label_prompts[i*batch_size: i*batch_size + batch_size]
 
         t1 = time.time()
         device = torch.device("cuda")
@@ -50,9 +51,9 @@ def generate_zeroshot(pos_prompt, neg_prompt, neu_prompt):
             
             generations.append(text)
 
-    generations_dict = {"Texts": generations}
+    generations_dict = {"Texts": generations, "Labels": labels}
     df = pd.DataFrame(generations_dict)
-    df.to_csv("{}/results/generations_zeroshot_hiproduct.csv".format(repo_path), index=False)
+    df.to_csv("{}/results/generations_zeroshot_hiproductv2.csv".format(repo_path), index=False)
 
 
 
@@ -134,10 +135,16 @@ def main():
     Please generate a single review in not more than two short sentences on one of the system specified products/movies/travels indicating a negative sentiment.[/INST]"""
 
     neu_prompt = """<s>[INST] <<SYS>>
-    You are a user providing reviews on travels, movies and various electronic gadgets. Please only generate the review without any additional content before or after.
+    You are a user who talks about travels, movies and various electronic gadgets in a fact-based, and non-opinionated manner. Please don't involve emotional language or bias. Please only generate the description without any additional content before or after.
     <</SYS>>
     
-    Please generate a single review in not more than two short sentences on one of the system specified products/movies/travels indicating neither positive nor negative sentiment.[/INST]"""
+    Please generate a single and very short sentence on one of the system specified products/movies/travels. It should provide very general information.[/INST]"""
+
+    # neu_prompt = """<s>[INST] <<SYS>>
+    # You are a user providing reviews on travels, movies and various electronic gadgets. Please only generate the review without any additional content before or after.
+    # <</SYS>>
+    
+    # Please generate a single review in not more than two short sentences on one of the system specified products/movies/travels indicating neither positive nor negative sentiment.[/INST]"""
 
     # print(prompt)
     # generate_text([neu_prompt])

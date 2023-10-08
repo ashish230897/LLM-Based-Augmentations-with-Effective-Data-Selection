@@ -18,22 +18,23 @@ model = None
 
 def generate_fewshot(pos_prompt, neg_prompt, neu_prompt):
 
-    num_generations = 200000
+    num_generations = 250000
 
-    labels = [pos_prompt, neg_prompt, neu_prompt]*int(num_generations/3)
+    label_prompts = [pos_prompt, neg_prompt, neu_prompt, neu_prompt]*int(num_generations/4)
+    labels = ["positive", "negative", "neutral", "neutral"]*int(num_generations/4)
     
     print(len(labels))
 
     print("Length of labels is {}".format(len(labels)))
-    batch_size = 40
+    batch_size = 50
     num_batches = int(len(labels)/batch_size)
     generations = []
 
     for i in tqdm(range(num_batches)):
         if i == num_batches - 1:
-            texts = labels[i*batch_size:]
+            texts = label_prompts[i*batch_size:]
         else:
-            texts = labels[i*batch_size: i*batch_size + batch_size]
+            texts = label_prompts[i*batch_size: i*batch_size + batch_size]
 
         t1 = time.time()
         device = torch.device("cuda")
@@ -50,9 +51,9 @@ def generate_fewshot(pos_prompt, neg_prompt, neu_prompt):
             
             generations.append(text)
 
-    generations_dict = {"Texts": generations}
+    generations_dict = {"Texts": generations, "Labels": labels}
     df = pd.DataFrame(generations_dict)
-    df.to_csv("{}/results/generations_fewshot_hiproduct.csv".format(repo_path), index=False)
+    df.to_csv("{}/results/generations_fewshot_hiproductv2.csv".format(repo_path), index=False)
 
 
 
@@ -153,20 +154,34 @@ def main():
     Review: [/INST]
     """
 
+    # neu_prompt = """<s>[INST] <<SYS>>
+    # You are a user providing reviews on travels, movies and various electronic gadgets. Please only generate the review without any additional content before or after.
+
+    # <</SYS>>
+
+    # Please generate a single review in not more than two short sentences on one of the system specified products/movies/travels indicating neither negative nor positive sentiment, and similar in style to the below five few-shot reviews (Do not ignore the sentences in the last). Here are the five few-shot reviews:
+    # Review: The Sundarbans National Park is located in the Sundarbans delta region of the Ganges River in the southern part of West Bengal state.
+    # Review: In the process of making the film and living his character, many times the actors are influenced and disturbed by the essence of the film, but only a few of them are able to convey the zest of the role.
+    # Review: The character of the villain is also very similar to the old films.
+    # Review: There are many institutions in Bodh Gaya that do the same.
+    # Review: If you have an Android-based handset, it can be purchased as a second handset.
+    # Review: The closest competitor to the Asus Fonepad tablet is the Samsung Galaxy Tab 2.
+    # Review: The company is offering a 12-month warranty on the device.
+    # Review: [/INST]
+    # """
+
     neu_prompt = """<s>[INST] <<SYS>>
-    You are a user providing reviews on travels, movies and various electronic gadgets. Please only generate the review without any additional content before or after.
+    You are a user who talks about travels, movies and various electronic gadgets in a fact-based, and non-opinionated manner. Please don't involve emotional language or bias. Please only generate the description without any additional content before or after.
 
     <</SYS>>
 
-    Please generate a single review in not more than two short sentences on one of the system specified products/movies/travels indicating neither negative nor positive sentiment, and similar in style to the below five few-shot reviews (Do not ignore the sentences in the last). Here are the five few-shot reviews:
-    Review: The Sundarbans National Park is located in the Sundarbans delta region of the Ganges River in the southern part of West Bengal state.
-    Review: In the process of making the film and living his character, many times the actors are influenced and disturbed by the essence of the film, but only a few of them are able to convey the zest of the role.
-    Review: The character of the villain is also very similar to the old films.
-    Review: There are many institutions in Bodh Gaya that do the same.
-    Review: If you have an Android-based handset, it can be purchased as a second handset.
-    Review: The closest competitor to the Asus Fonepad tablet is the Samsung Galaxy Tab 2.
-    Review: The company is offering a 12-month warranty on the device.
-    Review: [/INST]
+    Please generate a single and very short sentence on one of the system specified products/movies/travels. It should provide very general information, and should be similar in style to the below five few-shot sentences (Do not ignore the sentences in the last). Here are the five few-shot sentences:
+    Sentence: The Sundarbans National Park is located in the Sundarbans delta region of the Ganges River in the southern part of West Bengal state.
+    Sentence: In the process of making the film and living his character, many times the actors are influenced and disturbed by the essence of the film, but only a few of them are able to convey the zest of the role.
+    Sentence: There are many institutions in Bodh Gaya that do the same.
+    Sentence: If you have an Android-based handset, it can be purchased as a second handset.
+    Sentence: The closest competitor to the Asus Fonepad tablet is the Samsung Galaxy Tab 2.
+    Sentence: [/INST]
     """
 
     # print(prompt)
