@@ -1,6 +1,9 @@
 # Copyright (c) Microsoft Corporation. Licensed under the MIT license.
 #script for finetuning(MLM objective)bibert on the realcs text
-BASE="/raid/speech/ashish/TSTG_new"
+BASE=${PWD}
+
+echo "current dir is ${BASE}"
+
 MODEL="xlm-roberta-large"
 #MODEL="bert-base-multilingual-cased"
 # PRETRAINED_MODEL="/home/ashish/benchmark/TSTG/self-training/pretrain_expts/output_ftrandom/final_model"

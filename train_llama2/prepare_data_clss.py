@@ -31,6 +31,31 @@ def convert_text(data, labels):
     
     return pd.DataFrame(dict)
 
+def convert_text_chat(data, labels):
+    text_labels = []
+
+    data_new = []
+    
+    for text in data:
+        if text[-1] not in [".", "!", "?"]:
+            text = text + "."
+        data_new.append(text)
+
+    data = data_new
+    
+    i = 0
+    for text, label in zip(data, labels):
+        text_label = "<s>[INST]\n Generate a {} sentiment sentence [/INST] {} </s>".format(label, text)
+        text_labels.append(text_label)
+
+        i += 1
+    
+    print("Lenght of texts is ", len(text_labels))
+
+    dict = {"text_label": text_labels}
+    
+    return pd.DataFrame(dict)
+
 def convert_text_bn(data, labels):
     text_labels = []
 
@@ -78,6 +103,8 @@ def main():
     
     if args.lang == "bn":
         df = convert_text_bn(data, labels)
+    elif args.lang == "en-chat":
+        df = convert_text_chat(data, labels)
     else:
         df = convert_text(data, labels)
 

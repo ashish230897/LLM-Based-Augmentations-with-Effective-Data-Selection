@@ -440,12 +440,12 @@ def generate_text(prompt):
     device = torch.device("cuda")
     inputs = tokenizer(prompt, return_tensors="pt").to(device)
     
-    for seed in range(2):
+    for seed in range(15):
         t1 = time.time()
 
         set_seed(seed)
 
-        outputs = model.generate(input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"], max_length=128, do_sample=True, top_p=0.9, num_return_sequences=1,
+        outputs = model.generate(input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"], max_length=256, do_sample=True, top_p=0.9, num_return_sequences=1,
             eos_token_id=tokenizer.eos_token_id, remove_invalid_values=True, no_repeat_ngram_size=2, temperature=1.5)
         print("Time taken for normal model is ---- {}".format(time.time() - t1))
 
@@ -500,12 +500,24 @@ def main():
     if args.load_finetuned:
         inference_model = PeftModel.from_pretrained(model, saved_path)
 
-    #prompt = "<s>[INST] <<SYS>>\nYour job is to comment on news from politics.\n<</SYS>>\n\nPlease generate a premise and a hypothesis pair with an entailment relation between them as follows:\npremise: How do you know? All this is their information again.\nhypothesis: This information belongs to them.\npremise: [/INST]"
-    #prompt = "<s>[INST] <<SYS>>\nYour job is to comment on news from politics.\n<</SYS>>\n\nPremise: How do you know? All this is their information again.\nHypothesis: This information belongs to them.\nPremise: You have access to the facts.\nHypothesis: The facts are accessible to you.\nPremise:[/INST]"
-    # prompt = "<s>[INST] Please generate one pair of two sentences that entail each other as follows:\nsent1: How do you know? All this is their information again.\nsent2: This information belongs to them.\nsent1: You have access to the facts.\nsent2: The facts are accessible to you.\nsent1: We stink all the time.\nsent2: We always stink.[/INST]"
-    # prompt = "<s>[INST] Please generate two sentences separated by <sep> token such that they entail each other as follows:\nHow do you know? All this is their information again. <sep> This information belongs to them.\nYou have access to the facts. <sep> The facts are accessible to you.\nWe stink all the time. <sep> We always stink.[/INST]"
-    # prompt = "<s>[INST] The opening date of the station was estimated to be mid-2020. In other words, [/INST]"
-    prompt = "<s> The opening date of the station was estimated to be mid-2020. In other words, "
+    prompt = """<s>[INST] <<SYS>>
+    You are a user providing reviews on news across a range of subjects, including politics, sports, food, entertainment, education, lifestyle, travel, fashion, agriculture etc. Please only generate the review without any additional content before or after.
+    <</SYS>>
+
+    Please generate a single review in not more than two short sentences on news in one of the system specified subjects indicating a positive sentiment and similar in style to the below five few-shot reviews (do not ignore the sentences in the last). Here are the five few-shot reviews:
+    Review: I want to see Sourav Ganguly as the head coach of the Bangladesh team, if everyone agrees, like it.
+    Review: There will be something to talk about, Mamu. Very nice food.
+    Review: I don't just want to thank someone, I want to say that God helps those who help others.
+    Review: Bhaiya is more of a foodie with a little loose dress, along with your food jokes, but your physical expressions also make us crave for food, hope you like it, thank you.
+    Review: Many heroes have come out of the slums in the world.   
+    Review: [/INST]
+    """
+
+    prompt = """<s>[INST] <<SYS>>
+    You are a user providing reviews on news across a range of subjects, including politics, sports, food, entertainment, education, lifestyle, travel, fashion, agriculture etc. Please only generate the review without any additional content before or after.
+    <</SYS>>
+    
+    Please generate a single review in not more than two short sentences on news in one of the system specified subjects indicating a positive sentiment.[/INST]"""
 
     generate_text([prompt])
 

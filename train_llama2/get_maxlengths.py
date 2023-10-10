@@ -4,8 +4,11 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import pandas as pd
 from datasets import Dataset
 
-model_id = "meta-llama/Llama-2-7b-hf"
+model_id = "meta-llama/Llama-2-13b-hf"
 tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True, use_auth_token="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")
+
+print(len(tokenizer("Papon is a devil. He should be kicked out of the BCB boat by the Hon'ble Prime Minister.", truncation=True)["input_ids"]))
+exit()
 
 train_df = pd.read_csv("/raid/speech/ashish/TSTG_new/data/bnsentiment/train-en_texts.csv")
 

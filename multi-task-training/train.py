@@ -143,7 +143,8 @@ class MultitaskDataloader:
         
         for task_choice in task_choice_list:
             task_name = self.task_name_list[task_choice]
-            yield next(dataloader_iter_dict[task_name])    
+            #print("current task is ", task_name)
+            yield next(dataloader_iter_dict[task_name])
 
 
 class MultitaskTrainer(transformers.Trainer):
@@ -210,15 +211,30 @@ class MultitaskTrainer(transformers.Trainer):
             task_name: self.get_single_train_dataloader(task_name, task_dataset) for task_name, task_dataset in self.train_dataset.items()
         })
 
-    def get_eval_dataloader(self):
+    
+    def get_eval_dataloader(self, eval_dataset):
         """
         Returns a MultitaskDataloader, which is not actually a Dataloader
         but an iterable that returns a generator that samples from each 
         task Dataloader
         """
-        return MultitaskDataloader({
-            task_name: self.get_single_eval_dataloader(task_name, task_dataset) for task_name, task_dataset in self.eval_dataset.items()
-        })
+
+        # eval_dataloader = self.get_single_eval_dataloader("sentiment", eval_dataset)
+        # print(eval_dataloader.data_loader)
+
+        # return MultitaskDataloader({
+        #     "sentiment": self.get_single_eval_dataloader("sentiment", eval_dataset)
+        # })
+
+        print(self.eval_dataset)
+        print()
+        exit()
+        
+        return self.get_single_eval_dataloader("sentiment", self.eval_dataset)
+
+        # return MultitaskDataloader({
+        #     task_name: self.get_single_eval_dataloader(task_name, task_dataset) for task_name, task_dataset in self.eval_dataset.items()
+        # })
 
 
 def _tensorize_batch(examples: List[torch.Tensor]) -> torch.Tensor:
@@ -415,14 +431,14 @@ def main():
 
     # load pretraining dataset
     file = open(data_args.pretrain_train_file_path)
-    pretrain_train_lines = file.readlines()
+    pretrain_train_lines = file.readlines()[0:10]
     file.close()
     pretrain_train_lines_sentence = [line.split("\t")[0].strip().replace("\n", "") for line in pretrain_train_lines]
     pretrain_train_lines_mask = [line.split("\t")[1].strip().replace("\n", "") for line in pretrain_train_lines]
     pretrain_train = Dataset.from_dict({"sentence": pretrain_train_lines_sentence, "masks": pretrain_train_lines_mask})
 
     file = open(data_args.pretrain_valid_file_path)
-    pretrain_valid_lines = file.readlines()
+    pretrain_valid_lines = file.readlines()[0:100]
     file.close()
     pretrain_valid_lines_sentence = [line.split("\t")[0].strip().replace("\n", "") for line in pretrain_valid_lines]
     pretrain_valid_lines_mask = [line.split("\t")[1].strip().replace("\n", "") for line in pretrain_valid_lines]
@@ -518,10 +534,12 @@ def main():
         task_name: dataset["train"] 
         for task_name, dataset in features_dict.items()
     }
-    eval_dataset = {
-        task_name: dataset["valid"] 
-        for task_name, dataset in features_dict.items()
-    }
+    # eval_dataset = {
+    #     task_name: dataset["valid"] 
+    #     for task_name, dataset in features_dict.items()
+    # }
+
+    eval_dataset = features_dict["sentiment"]["valid"]
 
     trainer = MultitaskTrainer(
         model=multitask_model,
