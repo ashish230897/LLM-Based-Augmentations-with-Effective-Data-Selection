@@ -18,7 +18,7 @@ model = None
 
 def generate_domainaware_mnli_premises():
 
-    total_generations = 50
+    total_generations = 60000
     
     domains = {"travel": int(0.4*total_generations), "government": int(0.4*total_generations), "fiction": int(0.2*total_generations)}
     
@@ -26,12 +26,15 @@ def generate_domainaware_mnli_premises():
     for domain,count in domains.items():
 
         # prompt = "<s>[INST] <<SYS>>\nYour job is to generate a short sentence having less than thirty words\n<</SYS>>\n\nPlease generate a single sentence belonging to the {} domain. [/INST]".format(domain)
-        prompt = "<s>[INST] <<SYS>>\nYour job is to generate a diverse sentence in the domain provided by the user. Please only generate the sentence without any additional content before or after. \n<</SYS>>\n\nPlease generate a single and short sentence belonging to the {} domain. [/INST]".format(domain)
+        if domain == "travel":
+            prompt = "<s>[INST] <<SYS>>\nYou are a user who talks about other people's traveling experiences. Please only generate the traveling experience in a single sentence without any additional content before or after. \n<</SYS>>\n\nPlease generate a single and short sentence.[/INST]"
+        else:
+            prompt = "<s>[INST] <<SYS>>\nYour job is to generate a diverse sentence in the domain provided by the user. Please only generate the sentence without any additional content before or after. \n<</SYS>>\n\nPlease generate a single and short sentence belonging to the {} domain. [/INST]".format(domain)
 
         labels += [prompt]*(int(count))
 
     print("Length of labels is {}".format(len(labels)))
-    batch_size = 20
+    batch_size = 80
     num_batches = int(total_generations/batch_size)
     generations = []
 
@@ -126,10 +129,11 @@ def main():
     if args.load_finetuned:
         inference_model = PeftModel.from_pretrained(model, saved_path)
 
-    prompt = "<s>[INST] <<SYS>>\nYour job is to generate a diverse sentence in the domain provided by the user. Please only generate the sentence without any additional content before or after. \n<</SYS>>\n\nPlease generate a single and short sentence belonging to the {} domain. [/INST]".format("fiction")
-    # generate_text([prompt])
+    #prompt = "<s>[INST] <<SYS>>\nYour job is to generate a diverse sentence in the domain provided by the user. Please only generate the sentence without any additional content before or after. \n<</SYS>>\n\nPlease generate a single and short sentence belonging to the {} domain.[/INST]".format("travel")
+    prompt = "<s>[INST] <<SYS>>\nYou are a user who talks about other people's traveling experiences. Please only generate the traveling experience in a single sentence without any additional content before or after. \n<</SYS>>\n\nPlease generate a single and short sentence.[/INST]".format("travel")
+    #generate_text([prompt])
 
-    # exit()
+    #exit()
 
     generate_domainaware_mnli_premises()
 
