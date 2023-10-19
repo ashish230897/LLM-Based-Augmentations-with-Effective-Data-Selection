@@ -7,7 +7,6 @@ import pandas as pd
 from tqdm import tqdm
 import time
 import argparse
-import random
 import os
 
 repo_path = os.getcwd()
