@@ -88,7 +88,8 @@ def process_xnli(args):
     labels = []
     for i,pre in enumerate(premises):
         labels.append(label_list[int(i%3)])
-
+    
+    text_dict = {}
 
     for i,(pre,hyp) in enumerate(zip(premises, hypos)):
         
@@ -115,13 +116,17 @@ def process_xnli(args):
         # pick texts having length > 17
         if len(hyp) <= 17:
             continue
-
+        
+        sent = pre.strip().replace("\n", "") + "\t" + hyp.strip().replace("\n", "") + "\t" + labels[i]
+        if sent in text_dict: continue
+        else: text_dict[sent] = 1
 
         new_premises.append(pre.strip().replace("\n", ""))
         new_hypos.append(hyp.strip().replace("\n", ""))
         
         new_labels.append(labels[i])
     
+
     assert len(new_premises) == len(new_hypos) == len(new_labels)
 
     new_df = pd.DataFrame({"Premises": new_premises, "Hypothesis": new_hypos, "Label": new_labels})
@@ -244,3 +249,13 @@ if __name__ == "__main__":
         process_labeled(args)
     else:
         main(args.input_path, args.output_path)
+
+# commands
+# to clean the file that has labels in it:
+# python utils/clean_data.py --input_path /raid/speech/ashish/TSTG_new/results/generations_zeroshot_marsentiment_proc.csv --output_path /raid/speech/ashish/TSTG_new/data/marsentiment/pretraining/pretrain_label_en.csv --task hiproductlabeled
+
+# to clean the file that has no labels:
+# python utils/clean_data.py --input_path /raid/speech/ashish/TSTG_new/results/generations_zeroshot_nlipremises_proc.csv --output_path /raid/speech/ashish/TSTG_new/data/xnli/pretraining/pretrain_label_enpremises.csv --task nli
+
+# to clean the xnli premise hypo file
+# python utils/clean_data.py --input_path /raid/speech/ashish/TSTG_new/results/generations_zeroshot_nliprehypos.csv --output_path /raid/speech/ashish/TSTG_new/data/xnli/pretraining/pretrain_label_enprehypos.csv --task xnli

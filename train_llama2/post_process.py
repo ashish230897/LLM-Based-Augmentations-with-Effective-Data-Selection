@@ -166,9 +166,9 @@ def main():
 
     if args.task == "sst5":
         sst5_postprocess(args)
-    elif args.task == "xnli":
+    elif args.task == "xnlihypos":
         xnli_postprocess(args)
-    elif args.task == "bnsentiment" or args.task == "hiproduct":
+    elif args.task == "bnsentiment" or args.task == "hiproduct" or args.task == "xnli":
         bnsentiment_postprocess(args)
     elif args.task == "hiproductunlabeled":
         bnsentiment_postprocesslabeled(args)
@@ -179,3 +179,13 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# commands
+# for processing file that has labels in it:
+# python train_llama2/post_process.py --input_path /raid/speech/ashish/TSTG_new/results/generations_zeroshot_marsentiment.csv --output_path /raid/speech/ashish/TSTG_new/results/generations_zeroshot_marsentiment_proc.csv --task hiproductLabeled
+
+# for processing file that do not have labels:
+# python train_llama2/post_process.py --input_path /raid/speech/ashish/TSTG_new/results/generations_zeroshot_marsentiment.csv --output_path /raid/speech/ashish/TSTG_new/results/generations_zeroshot_marsentiment_proc.csv --task hiproduct
+
+# for postprocessing xnli premises, hypos:
+# python train_llama2/post_process.py --input_path /raid/speech/ashish/TSTG_new/results/generations_zeroshot_nlihypos.csv --output_path /raid/speech/ashish/TSTG_new/results/generations_zeroshot_nliprehypos.csv --premises_input_path /raid/speech/ashish/TSTG_new/data/xnli/pretraining/pretrain_label_enpremises.csv --task xnlihypos
