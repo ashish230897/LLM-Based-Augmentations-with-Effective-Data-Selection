@@ -1,12 +1,9 @@
 # Copyright (c) Microsoft Corporation. Licensed under the MIT license.
-import copy
 import argparse
 import logging
-import os
 import random
 import numpy as np
 import torch
-from torch import nn
 from torch.utils.data import DataLoader, SequentialSampler, RandomSampler, Dataset
 from tqdm import tqdm, trange
 from transformers import (
@@ -17,7 +14,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 from torch.nn import Softmax
 from multiprocessing import Pool
 import time
-import random
+import json
 
 torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.deterministic = True
@@ -60,8 +57,6 @@ def acc_and_f1(preds, labels):
 
 
 def read_examples_from_file(data_dir):
-    # file_path = os.path.join(data_dir, "{}.txt".format(mode))
-    #file_path = os.path.join(data_dir, "{}".format(mode))
     file_path = data_dir
 
     examples = []
@@ -69,65 +64,20 @@ def read_examples_from_file(data_dir):
         lines = infile.read().strip().split('\n')
     for line in lines:
         x = line.split('\t')
-        text = x[0]
-        label = x[1]
-        examples.append({'text': text, 'label': label})
-    # if mode == 'test':
-    #     for i in range(len(examples)):
-    #         if examples[i]['text'] == 'not found':
-    #             examples[i]['present'] = False
-    #         else:
-    #             examples[i]['present'] = True
+        texta = x[0]
+        textb = x[1]
+        label = x[2]
+        examples.append({'texta': texta, 'textb': textb, 'label': label})
+    
     return examples
 
 
-def convert_examples_to_features(examples,
-                                 label_list,
-                                 max_seq_length=128):
-
-    label_map = {label: i for i, label in enumerate(label_list)}
-
-    global features
-    features = []
-
-    for (ex_index, example) in enumerate(examples):
-
-        sentence = example['text']
-        label = example['label']
-
-        sentence_tokens = tokenizer.tokenize(sentence)[:max_seq_length - 2]
-        sentence_tokens = [tokenizer.cls_token] + \
-            sentence_tokens + [tokenizer.sep_token]
-        input_ids = tokenizer.convert_tokens_to_ids(sentence_tokens)
-
-        label = label_map[label]
-        features.append({'input_ids': input_ids,
-                         'label': label})
-        if 'present' in example:
-            features[-1]['present'] = example['present']
-
-    return features
-
-
-def get_labels(data_dir):
-    all_path = os.path.join(data_dir, "all.txt")
-    labels = []
-    with open(all_path, "r") as infile:
-        lines = infile.read().strip().split('\n')
-
-    for line in lines:
-        splits = line.split('\t')
-        label = splits[-1]
-        if label not in labels:
-            labels.append(label)
-    return labels
-
-
 class CustomDataset(Dataset):
-    def __init__(self, input_ids, labels, present=None):
+    def __init__(self, input_ids, labels, token_type_ids, present=None):
         self.input_ids = input_ids
         self.labels = labels
         self.present = present
+        self.token_type_ids = token_type_ids
 
     def __len__(self):
         return len(self.labels)
@@ -136,7 +86,7 @@ class CustomDataset(Dataset):
         if self.present:
             return torch.tensor(self.input_ids[i], dtype=torch.long), torch.tensor(self.labels[i], dtype=torch.long), self.present[i]
         else:
-            return torch.tensor(self.input_ids[i], dtype=torch.long), torch.tensor(self.labels[i], dtype=torch.long)
+            return torch.tensor(self.input_ids[i], dtype=torch.long), torch.tensor(self.labels[i], dtype=torch.long), torch.tensor(self.token_type_ids[i], dtype=torch.long)
 
 
 def collate(examples):
@@ -151,37 +101,25 @@ def collate(examples):
         max_length - len(t[0]), dtype=torch.long)]) for t in examples])
 
     labels = torch.stack([t[1] for t in examples])
+    # token_type_ids = torch.stack([t[2] for t in examples])
+    token_type_ids = torch.stack([torch.cat([t[2], torch.zeros(
+        max_length - len(t[2]), dtype=torch.long)]) for t in examples])
 
-    return first_sentence_padded, first_sentence_attn_masks, labels
+    # print(first_sentence_padded.size(), first_sentence_attn_masks.size(), labels.size(), token_type_ids.size())
 
-
-def load_and_cache_examples(args, tokenizer, labels, mode):
-
-    logger.info("Creating features from dataset file at %s", args.data_dir)
-    examples = read_examples_from_file(args.data_dir, mode)
-    features = convert_examples_to_features(examples, labels, args.max_seq_length)
-
-    # Convert to Tensors and build dataset
-    all_input_ids = [f['input_ids'] for f in features]
-    all_labels = [f['label'] for f in features]
-    args = [all_input_ids, all_labels]
-    if 'present' in features[0]:
-        present = [1 if f['present'] else 0 for f in features]
-        args.append(present)
-
-    dataset = CustomDataset(*args)
-    return dataset
+    return first_sentence_padded, first_sentence_attn_masks, labels, token_type_ids
 
 def takeSecond(ele):
     return ele[1]
 
 def process(sentence):
-    sentence_tokens = tokenizer.tokenize(sentence)[:256 - 2]
-    sentence_tokens = [tokenizer.cls_token] + \
-        sentence_tokens + [tokenizer.sep_token]
-    input_ids = tokenizer.convert_tokens_to_ids(sentence_tokens)
 
-    return {'input_ids': input_ids}
+    sentence = [json.loads(sentence)["texta"], json.loads(sentence)["textb"]]
+    inputs = tokenizer.encode_plus(sentence[0], sentence[1], add_special_tokens=True, max_length=256)
+    input_ids, token_type_ids = inputs["input_ids"], inputs["token_type_ids"]
+    #print(input_ids)
+
+    return {'input_ids': input_ids, "token_type_ids": token_type_ids}
 
 
 def pseudo_label(args, l3cube_train_examples, is_fraction, is_random):
@@ -202,13 +140,16 @@ def pseudo_label(args, l3cube_train_examples, is_fraction, is_random):
     print("Features length is {}".format(len(features)))
     print("Time taken is {}".format((time.time() - t1)/60))
     
+    l3cube_train_examples = [[json.loads(ex)["texta"], json.loads(ex)["textb"]] for ex in l3cube_train_examples]
+
     # Evaluation
     model_ = torch.nn.DataParallel(model)
+    # model_ = model
+    print("device is", args.device)
     model_.to(args.device)
 
     # form batches of size 10,00,000
     # Convert to Tensors and build dataset
-    #batch_size = 1000000
     batch_size = 128
     num_batches = int(len(features)/batch_size)
     print("Number of batches are {}".format(num_batches))
@@ -216,36 +157,42 @@ def pseudo_label(args, l3cube_train_examples, is_fraction, is_random):
     for batch in tqdm(range(num_batches)):
         current_batch = features[batch*batch_size: batch*batch_size+batch_size]
         all_input_ids = [f['input_ids'] for f in current_batch]
+        all_token_type_ids = [f['token_type_ids'] for f in current_batch]
         all_labels = [0 for _ in current_batch]
-        args_ = [all_input_ids, all_labels]
+        args_ = [all_input_ids, all_labels, all_token_type_ids]
         dataset = CustomDataset(*args_)
+        
         eval_sampler = SequentialSampler(dataset)
         eval_dataloader = DataLoader(
-            dataset, sampler=eval_sampler, batch_size=args.eval_batch_size, collate_fn=collate,num_workers=2)
+            dataset, sampler=eval_sampler, batch_size=args.eval_batch_size, collate_fn=collate, num_workers=2)
         
         with torch.no_grad():
             model_.eval()
             for batch in tqdm(eval_dataloader, desc="Evaluating"):
                 batch = tuple(t.to(args.device) for t in batch)
                 inputs = {"input_ids": batch[0],
-                            "attention_mask": batch[1],
-                            "labels": batch[2]}
+                            "attention_mask": batch[1], "labels": batch[2]} #, "token_type_ids": batch[3]}, xlm doesnt use segment ids
                 outputs = model_(**inputs)#, return_dict=False)
+                # print(outputs)
+                # exit()
                 prob = m(outputs[1])
+
                 labels = list(torch.argmax(prob, dim=1).cpu().numpy())
                 prob = prob.cpu().numpy()
                 for j,index in enumerate(labels):
                     label_probs.append((index, prob[j][index]))
     
     if num_batches*batch_size < len(features):
-        current_batch = features[num_batches*batch_size: ]
+        current_batch = features[num_batches*batch_size:]
         all_input_ids = [f['input_ids'] for f in current_batch]
+        all_token_type_ids = [f['token_type_ids'] for f in current_batch]
         all_labels = [0 for _ in current_batch]
-        args_ = [all_input_ids, all_labels]
+        args_ = [all_input_ids, all_labels, all_token_type_ids]
         dataset = CustomDataset(*args_)
+        
         eval_sampler = SequentialSampler(dataset)
         eval_dataloader = DataLoader(
-            dataset, sampler=eval_sampler, batch_size=args.eval_batch_size, collate_fn=collate,num_workers=2)
+            dataset, sampler=eval_sampler, batch_size=args.eval_batch_size, collate_fn=collate, num_workers=2)
         
         with torch.no_grad():
             model_.eval()
@@ -267,9 +214,9 @@ def pseudo_label(args, l3cube_train_examples, is_fraction, is_random):
 
     t1 = time.time()
     # collect neutral,positive,negative in separate lists and sort them
-    neutral = [("neutral", tup[1], i) for i,(tup) in enumerate(label_probs) if tup[0] == 0]
-    positive = [("positive", tup[1], i) for i,(tup) in enumerate(label_probs) if tup[0] == 1]
-    negative = [("negative", tup[1], i) for i,(tup) in enumerate(label_probs) if tup[0] == 2]
+    negative = [("contradiction", tup[1], i) for i,(tup) in enumerate(label_probs) if tup[0] == 0]
+    positive = [("entailment", tup[1], i) for i,(tup) in enumerate(label_probs) if tup[0] == 1]
+    neutral = [("neutral", tup[1], i) for i,(tup) in enumerate(label_probs) if tup[0] == 2]
 
     print("Time taken 1: {}".format(time.time() - t1))
 
@@ -298,33 +245,33 @@ def pseudo_label(args, l3cube_train_examples, is_fraction, is_random):
     # sents_per_class = 5800
     
     for _,prob,index in neutral:
-        if l3cube_train_examples[index] not in new_examples_dict:
-            if len(l3cube_train_examples[index].split()) >= 5:
-                new_examples.append({"text": l3cube_train_examples[index], "label": "neutral", "prob": prob})
-                new_examples_dict[l3cube_train_examples[index]] = 1
+        if l3cube_train_examples[index][0] + "\t" + l3cube_train_examples[index][1] not in new_examples_dict:
+            if len(l3cube_train_examples[index][0].split()) >= 5 and len(l3cube_train_examples[index][1].split()) >= 5:
+                new_examples.append({"texta": l3cube_train_examples[index][0], "textb": l3cube_train_examples[index][1], "label": "neutral", "prob": prob})
+                new_examples_dict[l3cube_train_examples[index][0] + "\t" + l3cube_train_examples[index][1]] = 1
                 if len(new_examples)  == sents_per_class:
                     break
     
     for _,prob,index in positive:
-        if l3cube_train_examples[index] not in new_examples_dict:
-            if len(l3cube_train_examples[index].split()) >= 5:
-                new_examples.append({"text": l3cube_train_examples[index], "label": "positive", "prob": prob})
-                new_examples_dict[l3cube_train_examples[index]] = 1
+        if l3cube_train_examples[index][0] + "\t" + l3cube_train_examples[index][1] not in new_examples_dict:
+            if len(l3cube_train_examples[index][0].split()) >= 5 and len(l3cube_train_examples[index][1].split()) >= 5:
+                new_examples.append({"texta": l3cube_train_examples[index][0], "textb": l3cube_train_examples[index][1], "label": "entailment", "prob": prob})
+                new_examples_dict[l3cube_train_examples[index][0] + "\t" + l3cube_train_examples[index][1]] = 1
                 if len(new_examples)  == sents_per_class*2:
                     break
     
     for _,prob,index in negative:
-        if l3cube_train_examples[index] not in new_examples_dict:
-            if len(l3cube_train_examples[index].split()) >= 5:
-                new_examples.append({"text": l3cube_train_examples[index], "label": "negative", "prob": prob})
-                new_examples_dict[l3cube_train_examples[index]] = 1
+        if l3cube_train_examples[index][0] + "\t" + l3cube_train_examples[index][1] not in new_examples_dict:
+            if len(l3cube_train_examples[index][0].split()) >= 5 and len(l3cube_train_examples[index][1].split()) >= 5:
+                new_examples.append({"texta": l3cube_train_examples[index][0], "textb": l3cube_train_examples[index][1], "label": "contradiction", "prob": prob})
+                new_examples_dict[l3cube_train_examples[index][0] + "\t" + l3cube_train_examples[index][1]] = 1
                 if len(new_examples)  == sents_per_class*3:
                     break
 
     print("Time taken 2: {}".format(time.time() - t1))
 
     for example in new_examples:
-        file.write(example["text"] + "\t" + example["label"] + "\t" + str(example["prob"]) + "\n")
+        file.write(example["texta"] + "\t" + example["textb"] + "\t" + example["label"] + "\t" + str(example["prob"]) + "\n")
     file.close()
 
 
@@ -375,6 +322,7 @@ def main():
     args = parser.parse_args()
     
     device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
+    # device = torch.device("cpu")
     args.device = device
     print(args.device)
 
@@ -387,7 +335,7 @@ def main():
     set_seed(args)
     
     l3cube_train_examples = read_examples_from_file(args.input_file)     
-    l3cube_train_examples = [dict["text"] for dict in l3cube_train_examples]
+    l3cube_train_examples = [json.dumps({"texta": dict["texta"], "textb": dict["textb"]}) for dict in l3cube_train_examples]
 
     logger.info("Training/evaluation parameters %s", args)
 
