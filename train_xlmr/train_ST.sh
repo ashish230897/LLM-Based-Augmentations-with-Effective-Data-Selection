@@ -39,7 +39,7 @@ fi
 
 if [ $MODEL == "xlm-mlm-100-1280" ] || [ $MODEL == "xlm-roberta-large" ]; then
   BATCH_SIZE=32
-  GRAD_ACC=6
+  GRAD_ACC=4
   #GRAD_ACC=2
   #LR=3e-5
   LR=5e-6
@@ -50,6 +50,8 @@ else
 fi
 
 SAVE_DIR="$OUT_DIR/$TASK/${OUTPUT_MODEL_NAME}/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}/"
+# SAVE_DIR="$OUT_DIR/$TASK/${OUTPUT_MODEL_NAME}/"  #for evaluation
+
 mkdir -p $SAVE_DIR
 
 tokenizer_name="xlm-roberta-large"
@@ -66,7 +68,6 @@ tokenizer_name="xlm-roberta-large"
 
 
 # python $PWD/train_xlmr/run_classify_student_ST2.py \
-# python $PWD/train_xlmr/run_classify_regular.py \
 # python $PWD/train_xlmr/run_classify_regular.py \
 python $PWD/train_xlmr/run_classify_student_ST1.py \
   --model_type $MODEL_TYPE \
@@ -91,14 +92,14 @@ python $PWD/train_xlmr/run_classify_student_ST1.py \
   --eval_test_set $LC \
   --overwrite_cache \
   --data_dir $DATA_DIR/${TASK} \
---do_train \
   --do_eval \
-  --temperature 1.5  
+  --do_train \
+  --temperature 1.5 \
+  --seed 42
+
+
 
   
-
-
-
 
 # bash train_xlmr/train_ST.sh xlm-roberta-large bn xlm-roberta-large selftrain-1a-s1-ep1 bnsentiment    #SC1
 
@@ -122,6 +123,7 @@ python $PWD/train_xlmr/run_classify_student_ST1.py \
 
 # CUDA_VISIBLE_DEVICES=5 bash train_xlmr/train_ST.sh xlm-roberta-large bn xlm-roberta-large selftrain-1b-s1 bnsentiment
 
+
 # CUDA_VISIBLE_DEVICES=0 bash train_xlmr/train_ST.sh xlm-roberta-large bn xlm-roberta-large selftrain-1a-s1-redone bnsentiment
 # CUDA_VISIBLE_DEVICES=5 bash train_xlmr/train_ST.sh xlm-roberta-large bn xlm-roberta-large selftrain-1b-s1-redone bnsentiment
 
@@ -132,4 +134,23 @@ python $PWD/train_xlmr/run_classify_student_ST1.py \
 
 # CUDA_VISIBLE_DEVICES=5 nohup bash train_xlmr/train_ST.sh xlm-roberta-large bn xlm-roberta-large exp-B-5k-sst-t1.5 bnsentiment > log-B-5-t1.5 &
 # CUDA_VISIBLE_DEVICES=5 nohup bash train_xlmr/train_ST.sh xlm-roberta-large bn xlm-roberta-large exp-B-2.5k-sst-t1.5 bnsentiment > log-B-2.5-t1.5 &
-# CUDA_VISIBLE_DEVICES=0 nohup bash train_xlmr/train_ST.sh xlm-roberta-large bn xlm-roberta-large exp-CC-2.5k-sst-t1.5 bnsentiment > log-C-2.5-t1.5 &
+# CUDA_VISIBLE_DEVICES=5 nohup bash train_xlmr/train_ST.sh xlm-roberta-large bn xlm-roberta-large exp-E-2.5k-sst-t1.5 bnsentiment > log-E-2.5-t1.5_bnsent_eval &
+
+
+# CUDA_VISIBLE_DEVICES=1 nohup bash train_xlmr/train_ST.sh xlm-roberta-large bn xlm-roberta-large sst5/bnsst5finetuned bnsentiment > log-sst5bn &
+
+# CUDA_VISIBLE_DEVICES=0 nohup bash train_xlmr/train_ST.sh xlm-roberta-large bn xlm-roberta-large zeroshot-rand-v2-2-t1.5-seed42 bnsentiment > log-zeroshot-rand-v2-2-t1.5-seed42-eval_more &
+
+#Hindi Product:
+# CUDA_VISIBLE_DEVICES=7 nohup bash train_xlmr/train_ST.sh xlm-roberta-large mar xlm-roberta-large zeroshot-expt-2-rand-t1.5-seed12 marsentiment > logs-marsentiment/log-expt-2-zeroshot-rand-t1.5-seed12-eval_more &
+
+# CUDA_VISIBLE_DEVICES=7 nohup bash train_xlmr/train_ST.sh xlm-roberta-large hi xlm-roberta-large fewshot-expt-3-rand-t1.5-seed42/xlm-roberta-large-LR5e-6-epoch15-MaxLen128/checkpoint-best hiproduct > dummy_log &
+
+# bash train_xlmr/evaluate.sh xlm-roberta-large mar /raid/speech/ashish/TSTG_new/results/marsentiment/zeroshot-expt-2-rand-t1.5-seed42/xlm-roberta-large-LR5e-6-epoch15-MaxLen128/checkpoint-best marsentiment 42
+
+
+# CUDA_VISIBLE_DEVICES=3 nohup bash train_xlmr/train_ST.sh xlm-roberta-large sw xlm-roberta-large sw-zeroshot-expt-2-ambk-t1.5-seed12 xnli > logs-xnli/sw-zeroshot-expt-2-ambk-t1.5-seed12 &
+
+
+#SUBSET MARATHI 25K
+# CUDA_VISIBLE_DEVICES=3 nohup bash train_xlmr/train_ST.sh xlm-roberta-large en xlm-roberta-large en-zeroshot-expt-3-rand-t1.5-seed42-50k marsentiment > logs-marsentiment/subset_50k/en-zeroshot-expt-3-rand-t1.5-seed42 &

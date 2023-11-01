@@ -53,10 +53,11 @@ from transformers import (
 )
 
 from processors.utils_custom import convert_examples_to_features
-from processors.xnli import XnliProcessor
+from processors.xnli_custom import XnliProcessor_custom
 from processors.bnsentiment_custom import BnSentimentProcessor_custom
 from processors.mlheadline import MlHeadlineProcessor
-from processors.hiproduct import HiProductProcessor
+from processors.hiproduct_custom import HiProductProcessor_custom
+from processors.marsentiment_custom import MarSentimentProcessor_custom
 
 try:
   from torch.utils.tensorboard import SummaryWriter
@@ -73,13 +74,15 @@ MODEL_CLASSES = {
 }
 
 PROCESSORS = {
-  'xnli': XnliProcessor,
+  'xnli': XnliProcessor_custom,
   'bnsentiment': BnSentimentProcessor_custom,
   'mlheadline': MlHeadlineProcessor,
-  'hiproduct': HiProductProcessor
+  'hiproduct': HiProductProcessor_custom,
+  'marsentiment': MarSentimentProcessor_custom
 }
 
-
+  # 'hiproduct': HiProductProcessor
+#
 def compute_metrics(preds, labels):
   #labels are ["contradiction", "entailment", "neutral"]
   label_dict = {0: 0, 1: 0, 2: 0}
@@ -457,6 +460,7 @@ def load_and_cache_examples(args, task, tokenizer, split='train', language='en',
     torch.distributed.barrier()
 
   processor = PROCESSORS[task]()
+  print("Processor selected is: ",processor)
   output_mode = "classification"
   # Load data features from cache or dataset file
   lc = '_lc' if args.do_lower_case else ''
@@ -479,10 +483,9 @@ def load_and_cache_examples(args, task, tokenizer, split='train', language='en',
     logger.info("Creating features from dataset file at %s", args.data_dir)
     label_list = processor.get_labels()
     if split == 'train':
-      # examples = processor.get_train_examples(args.data_dir+"/selftraining/1a/s1/", "train", language)
-      # examples = processor.get_train_examples(args.data_dir+"/selftraining/1a/s4/", "train", language)
-      examples = processor.get_train_examples("/raid/speech/ashish/TSTG_new/data/sst5/pretraining/pseudolabeled/combined_2.5_sst", "train", 'bn')
-      
+      #hereisthetrain
+      # examples = processor.get_train_examples("data/snli/zero-shot_ambiguous/expt-2/",  "train", 'sw')
+      examples = processor.get_train_examples("data/marsentiment/zero-shot_rand/expt-3/sample_50k/",  "train", 'en')
     elif split == 'swapped':
       examples = processor.get_train_examples(args.data_dir, "swapped", language)
     elif split == 'translate-train':
@@ -491,12 +494,14 @@ def load_and_cache_examples(args, task, tokenizer, split='train', language='en',
       examples = processor.get_translate_test_examples(args.data_dir, language)
     elif split == 'dev':
       # examples = processor.get_dev_examples(args.data_dir, language)
-      examples = processor.get_dev_examples("/raid/speech/ashish/TSTG_new/data/sst5", 'bn')
+      examples = processor.get_dev_examples("/raid/speech/ashish/TSTG_new/data/sst5", 'en')  #always use source as eval set
+      # examples = processor.get_dev_examples("/raid/speech/ashish/TSTG_new/data/snli/", 'sw')  #always use source as eval set
     elif split == 'pseudo_test':
       examples = processor.get_pseudo_test_examples(args.data_dir, language)
     else:
       # examples = processor.get_test_examples(args.data_dir, language)
       examples = processor.get_test_examples("/raid/speech/ashish/TSTG_new/data/sst5", 'en')
+      # examples = processor.get_test_examples("/raid/speech/ashish/TSTG_new/data/snli", 'sw')
 
     features = convert_examples_to_features(
       examples,
@@ -805,10 +810,13 @@ def main():
     # model = model_class.from_pretrained("/raid/speech/ashish/TSTG_new/results/bnsentiment/selftrain-1b-t2/xlm-roberta-large-LR5e-6-epoch15-MaxLen128/checkpoint-best",num_labels=3)
     model.to(args.device)
     # model_teacher = model_class.from_pretrained("/raid/speech/ashish/TSTG_new/results/bnsentiment/bnfinetuning/xlm-roberta-large-LR5e-6-epoch15-MaxLen128/checkpoint-best",num_labels=3)
-    model_teacher = model_class.from_pretrained("/raid/speech/ashish/TSTG_new/results/sst5/ensst5finetuned/xlm-roberta-large-LR5e-6-epoch15-MaxLen128/checkpoint-best",num_labels=3)
-    # model_teacher = model_class.from_pretrained("/raid/speech/ashish/TSTG_new/results/bnsentiment/selftrain-1b-t2/xlm-roberta-large-LR5e-6-epoch15-MaxLen128/checkpoint-best",num_labels=3)
+    # model_teacher = model_class.from_pretrained("/raid/speech/ashish/TSTG_new/results/bnsentiment/sst5/bnsst5finetuned/xlm-roberta-large-LR5e-6-epoch15-MaxLen128/checkpoint-best",num_labels=3)
+    # model_teacher = model_class.from_pretrained("/raid/speech/ashish/TSTG_new/results/snli/swsnlifinetuned/xlm-roberta-large-LR5e-6-epoch15-MaxLen128/checkpoint-best",num_labels=3)
+    # model_teacher = model_class.from_pretrained("/raid/speech/ashish/TSTG_new/results/sst5/marsst5finetuned/xlm-roberta-large-LR5e-6-epoch15-MaxLen128/checkpoint-best",num_labels=3)
+    model_teacher = model_class.from_pretrained("/raid/speech/ashish/TSTG_new/results/sst5/ensst5finetunedv2/xlm-roberta-large-LR5e-6-epoch15-MaxLen128/checkpoint-best",num_labels=3) 
+
     model_teacher.eval()
-    # model_teacher = model_class.from_pretrained("/raid/speech/ashish/TSTG_new/results/bnsentiment/selftrain-1b-t2/xlm-roberta-large-LR5e-6-epoch15-MaxLen128/checkpoint-best",num_labels=3)
+ 
     model_teacher.to(args.device)
     train_dataset = load_and_cache_examples(args, args.task_name, tokenizer, split="train", language=args.train_language, lang2id=lang2id, evaluate=False)
     logger.info("Length of train dataset is {}".format(len(train_dataset)) )
@@ -848,14 +856,13 @@ def main():
   else:
     best_checkpoint = args.output_dir
   best_score = 0
-  
+  #Evaluation (dev set)
   if args.do_eval and args.local_rank in [-1, 0]: # this is set to true
     tokenizer = tokenizer_class.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
     checkpoints = [args.output_dir]
     if args.eval_all_checkpoints:  # this is true
       checkpoints = list(
-        os.path.dirname(c) for c in sorted(glob.glob(args.output_dir + "/**/" + WEIGHTS_NAME, recursive=True))
-      )
+        os.path.dirname(c) for c in sorted(glob.glob(args.output_dir + "/**/" + WEIGHTS_NAME, recursive=True)))
       logging.getLogger("transformers.modeling_utils").setLevel(logging.WARN)  # Reduce logging
     logger.info("Evaluate the following checkpoints: %s", checkpoints)
     
@@ -865,54 +872,56 @@ def main():
 
       model = model_class.from_pretrained(checkpoint)
       model.to(args.device)
-      result = evaluate(args, model, tokenizer, split='dev', language=args.dev_language, lang2id=lang2id, prefix=prefix, output_file = 'results/bnsentiment/exp-CC-2.5k-sst-t1.5/dev-en-sst5_preds')
+      # result = evaluate(args, model, tokenizer, split='dev', language=args.dev_language, lang2id=lang2id, prefix=prefix, output_file = 'results/hiproduct/fewshot-expt-2-rand-t1.5-seed100/dev-hiprod_preds')
+      result = evaluate(args, model, tokenizer, split='dev', language=args.dev_language, lang2id=lang2id, prefix=prefix, output_file = 'results/marsentiment/en-zeroshot-expt-3-rand-t1.5-seed42-50k/dev-sst5-en_preds.50k')
+
       if result['acc'] > best_score:
         best_checkpoint = checkpoint
         best_score = result['acc']
       result = dict((k + "_{}".format(global_step), v) for k, v in result.items())
       results.update(result)
     
-    output_eval_file = os.path.join(args.output_dir, 'eval_results_sst5-en')
+    output_eval_file = os.path.join(args.output_dir, 'eval_results_sst5-en.50k')
     with open(output_eval_file, 'w') as writer:
       for key, value in results.items():
         writer.write('{} = {}\n'.format(key, value))
       writer.write("Best checkpoint is {}, best accuracy is {}".format(best_checkpoint, best_score))
       logger.info("Best checkpoint is {}, best accuracy is {}".format(best_checkpoint, best_score))
 
-  # Prediction
+  # Prediction (Test)
   if args.do_predict and args.local_rank in [-1, 0]:
     #tokenizer = tokenizer_class.from_pretrained(args.model_name_or_path if args.model_name_or_path else best_checkpoint, do_lower_case=args.do_lower_case)
     tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name)
     model = model_class.from_pretrained(best_checkpoint)
     model.to(args.device)
-    output_predict_file = os.path.join(args.output_dir, args.test_split + '_results_sst5-en.txt')
+    output_predict_file = os.path.join(args.output_dir, args.test_split + '_results_sst5-en.txt.50k')
     total = total_correct = 0.0
     with open(output_predict_file, 'a') as writer:
       writer.write('======= Predict using the model from {} for {}:\n'.format(best_checkpoint, args.test_split))
       for language in args.predict_languages.split(','):
         output_file = os.path.join(args.output_dir, 'test-{}.tsv'.format(language))
-        result = evaluate(args, model, tokenizer, split=args.test_split, language=language, lang2id=lang2id, prefix='best_checkpoint', label_list=label_list,output_file = 'results/bnsentiment/exp-CC-2.5k-sst-t1.5/test-en-sst5_preds')
+        result = evaluate(args, model, tokenizer, split=args.test_split, language=language, lang2id=lang2id, prefix='best_checkpoint', label_list=label_list,output_file = 'results/marsentiment/en-zeroshot-expt-3-rand-t1.5-seed42-50k/test-sst5-en_preds.50k')
         writer.write('{}={}\n'.format(language, result['acc']))
         logger.info('{}={}'.format(language, result['acc']))
         total += result['num']
         total_correct += result['correct']
       writer.write('total={}\n'.format(total_correct / total))
 
-  if args.do_predict_dev:  # this is set to false
-    tokenizer = tokenizer_class.from_pretrained(args.model_name_or_path if args.model_name_or_path else best_checkpoint, do_lower_case=args.do_lower_case)
-    model = model_class.from_pretrained(args.init_checkpoint)
-    model.to(args.device)
-    output_predict_file = os.path.join(args.output_dir, 'dev_results')
-    total = total_correct = 0.0
-    with open(output_predict_file, 'w') as writer:
-      writer.write('======= Predict using the model from {}:\n'.format(args.init_checkpoint))
-      for language in args.predict_languages.split(','):
-        output_file = os.path.join(args.output_dir, 'dev-{}.tsv'.format(language))
-        result = evaluate(args, model, tokenizer, split='dev', language=language, lang2id=lang2id, prefix='best_checkpoint', output_file=output_file, label_list=label_list)
-        writer.write('{}={}\n'.format(language, result['acc']))
-        total += result['num']
-        total_correct += result['correct']
-      writer.write('total={}\n'.format(total_correct / total))
+  # if args.do_predict_dev:  # this is set to false
+  #   tokenizer = tokenizer_class.from_pretrained(args.model_name_or_path if args.model_name_or_path else best_checkpoint, do_lower_case=args.do_lower_case)
+  #   model = model_class.from_pretrained(args.init_checkpoint)
+  #   model.to(args.device)
+  #   output_predict_file = os.path.join(args.output_dir, 'dev_results')
+  #   total = total_correct = 0.0
+  #   with open(output_predict_file, 'w') as writer:
+  #     writer.write('======= Predict using the model from {}:\n'.format(args.init_checkpoint))
+  #     for language in args.predict_languages.split(','):
+  #       output_file = os.path.join(args.output_dir, 'dev-{}.tsv'.format(language))
+  #       result = evaluate(args, model, tokenizer, split='dev', language=language, lang2id=lang2id, prefix='best_checkpoint', output_file=output_file, label_list=label_list)
+  #       writer.write('{}={}\n'.format(language, result['acc']))
+  #       total += result['num']
+  #       total_correct += result['correct']
+  #     writer.write('total={}\n'.format(total_correct / total))
 
   return result
 
