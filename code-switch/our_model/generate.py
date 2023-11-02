@@ -38,7 +38,7 @@ def inference(inputs, batch_size):
         input_ids, attention_mask = tokenized_inputs["input_ids"], tokenized_inputs["attention_mask"]
         set_seed(42)
         
-        outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask, min_length=5, max_length=64,
+        outputs = model.generate(input_ids=input_ids, attention_mask=attention_mask, min_length=5, max_length=128,
                                 num_beams=5, early_stopping=True, no_repeat_ngram_size=2,
                                 eos_token_id=tokenizer.eos_token_id, remove_invalid_values=True, num_return_sequences=1)
 
@@ -100,6 +100,9 @@ def main():
     file = open(args.file_path)
     lines = file.readlines()
     file.close()
+    # df = pd.read_csv(args.file_path)
+    # sents = list(df["Texts"])
+    # labels = list(df["Labels"])
 
     sents, labels = [], []
     for line in lines:
@@ -110,12 +113,15 @@ def main():
     preds = inference(sents, args.batch_size)
     print("Time taken is ", time.time() - t1)
 
-    assert len(preds) == len(labels)
+    assert len(preds) == len(sents)
 
     file = open(args.out_path, "w+")
     for i,sent in enumerate(preds):
         file.write(sent + "\t" + labels[i] + "\n")
+        # file.write(sent + "\n")
     file.close()
+    # df = pd.DataFrame({"Texts": preds, "Labels": labels})
+    # df.to_csv(args.out_path, index=False)
 
 
 
