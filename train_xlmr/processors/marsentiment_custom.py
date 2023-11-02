@@ -25,7 +25,7 @@ from .utils_custom import InputExample
 logger = logging.getLogger(__name__)
 
 
-class BnSentimentProcessor_custom(DataProcessor):
+class MarSentimentProcessor_custom(DataProcessor):
     """Processor for the Bn Sentiment dataset.
     Adapted from https://github.com/google-research/bert/blob/f39e881b169b9d53bea03d2d341b31707a6c052b/run_classifier.py#L207"""
 
@@ -83,14 +83,14 @@ class BnSentimentProcessor_custom(DataProcessor):
         return ["neutral", "positive", "negative"]
 
 
-bnsentiment_processors = {
-    "bnsentiment": BnSentimentProcessor_custom,
+marsentiment_processors = {
+    "marsentiment": MarSentimentProcessor_custom,
 }
 
-bnsentiment_output_modes = {
-    "bnsentiment": "classification",
+marsentiment_output_modes = {
+    "marsentiment": "classification",
 }
 
-bnsentiment_tasks_num_labels = {
-    "bnsentiment": 3,
+marsentiment_tasks_num_labels = {
+    "marsentiment": 3,
 }

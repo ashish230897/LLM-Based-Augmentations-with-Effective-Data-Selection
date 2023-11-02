@@ -25,8 +25,8 @@ from .utils_custom import InputExample
 logger = logging.getLogger(__name__)
 
 
-class BnSentimentProcessor_custom(DataProcessor):
-    """Processor for the Bn Sentiment dataset.
+class HiProductProcessor_custom(DataProcessor):
+    """Processor for the Hi Product Review dataset.
     Adapted from https://github.com/google-research/bert/blob/f39e881b169b9d53bea03d2d341b31707a6c052b/run_classifier.py#L207"""
 
     def __init__(self):
@@ -38,6 +38,10 @@ class BnSentimentProcessor_custom(DataProcessor):
       for lg in language.split(','):
         lines = self._read_tsv(os.path.join(data_dir, "{}-{}.tsv".format(split, lg)))
         
+        print("!!!!!!!!!!!!!!!!! path is ", "{}-{}.tsv".format(split, lg))
+        print()
+
+        cnt = 0
         if split == "train":
             logger.info("\ntrain split in processor\n")
             for (i, line) in enumerate(lines):
@@ -48,7 +52,6 @@ class BnSentimentProcessor_custom(DataProcessor):
                 label_bool = int(line[2].strip().replace("\n", ""))  #1 for labeled data(0 for unlabeled data)
                 
                 assert isinstance(text_a, str) and isinstance(label, str)
-            
                 examples.append(InputExample(guid=guid, text_a=text_a, label=label, language=lg, label_bool = label_bool))
         else:
             for (i, line) in enumerate(lines):
@@ -61,13 +64,9 @@ class BnSentimentProcessor_custom(DataProcessor):
                     label = str(line[1].strip().replace("\n", ""))
                 
                 assert isinstance(text_a, str) and isinstance(label, str)
-                
                 examples.append(InputExample(guid=guid, text_a=text_a, label=label, language=lg))
-      
+        
       return examples
-
-
-
 
     def get_train_examples(self, data_dir, split, language='en'):
         return self.get_examples(data_dir, language, split)
@@ -83,14 +82,14 @@ class BnSentimentProcessor_custom(DataProcessor):
         return ["neutral", "positive", "negative"]
 
 
-bnsentiment_processors = {
-    "bnsentiment": BnSentimentProcessor_custom,
+hiproduct_processors = {
+    "hiproduct": HiProductProcessor_custom,
 }
 
-bnsentiment_output_modes = {
-    "bnsentiment": "classification",
+hiproduct_output_modes = {
+    "hiproduct": "classification",
 }
 
-bnsentiment_tasks_num_labels = {
-    "bnsentiment": 3,
+hiproduct_tasks_num_labels = {
+    "hiproduct": 3,
 }
