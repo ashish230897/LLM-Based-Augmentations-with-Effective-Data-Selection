@@ -1,7 +1,7 @@
 curr_dir=${PWD}
 
 # model args
-model_name="bigscience/mt0-xxl"
+model_name="bigscience/mt0-xl"
 device_map="auto"
 lora_alpha=32
 lora_dropout=0.05
@@ -24,9 +24,9 @@ learning_rate=2e-4
 max_grad_norm=0.3
 warmup_ratio=0.03
 lr_scheduler_type="constant"
-num_train_epochs=5
+num_train_epochs=15
 save_total_limit=1
-output_dir="${curr_dir}/models/mt0xxlv1/"
+output_dir="${curr_dir}/models/mt0xlv1/"
 evaluation_strategy="steps"
 metric_for_best_model="eval_loss"
 num_beams=1
