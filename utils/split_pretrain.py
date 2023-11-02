@@ -13,8 +13,15 @@ def preprocess(file_path):
     random.seed(42)
     random.shuffle(lines)
 
-    train = lines[0:int(0.9*len(lines))]
-    valid = lines[int(0.9*len(lines)):]
+    # train = lines[0:int(0.9*len(lines))]
+    # valid = lines[int(0.9*len(lines)):]
+    train = lines[0:130000]
+    valid = lines[130000:140000]
+
+    if len(valid) < 10000:
+        train = lines[0:int(0.9*len(lines))]
+        valid = lines[int(0.9*len(lines)):]
+
     
     file = open(file_path + ".train", "w+")
     for line in train:
