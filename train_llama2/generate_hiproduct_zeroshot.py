@@ -18,10 +18,10 @@ model = None
 
 def generate_zeroshot(pos_prompt, neg_prompt, neu_prompt):
 
-    num_generations = 250000
+    num_generations = 200000
 
-    label_prompts = [pos_prompt, neg_prompt, neu_prompt, neu_prompt]*int(num_generations/4)
-    labels = ["positive", "negative", "neutral", "neutral"]*int(num_generations/4)
+    label_prompts = [pos_prompt, neg_prompt, neu_prompt]*int(num_generations/3)
+    labels = ["positive", "negative", "neutral"]*int(num_generations/3)
     
     print(len(labels))
 
@@ -53,7 +53,7 @@ def generate_zeroshot(pos_prompt, neg_prompt, neu_prompt):
 
     generations_dict = {"Texts": generations, "Labels": labels}
     df = pd.DataFrame(generations_dict)
-    df.to_csv("{}/results/generations_zeroshot_hiproductv2.csv".format(repo_path), index=False)
+    df.to_csv("{}/results/generations_zeroshot_hiproduct.csv".format(repo_path), index=False)
 
 
 
