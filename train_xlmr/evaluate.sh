@@ -62,7 +62,6 @@ python $PWD/train_xlmr/run_classify.py \
   --dev_language ${LANG} \
   --task_name $TASK \
   --do_eval \
-  --do_predict \
   --data_dir $DATA_DIR/${TASK} \
   --gradient_accumulation_steps $GRAD_ACC \
   --per_gpu_train_batch_size $BATCH_SIZE \
@@ -77,4 +76,8 @@ python $PWD/train_xlmr/run_classify.py \
   --save_only_best_checkpoint \
   --overwrite_output_dir \
   --eval_test_set $LC \
-  --seed $seed
+  --seed $seed \
+  --do_predict \
+
+# command
+# bash train_xlmr/evaluate.sh xlm-roberta-large hi /raid/speech/ashish/TSTG_new/results/hiproduct/fewshot-expt-3-topk-t1.5-seed42/xlm-roberta-large-LR5e-6-epoch15-MaxLen128/checkpoint-best hiproduct 42
