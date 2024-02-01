@@ -188,6 +188,7 @@ def pseudo_label(args, l3cube_train_examples, is_fraction, is_random):
     
     print("Fraction bool is {}".format(is_fraction))
     print("Random bool is {}".format(is_random))
+    print("Pseudo label all bool is {}".format(args.pl_all))
     # get label and its probability for each example
     global features
     global model
@@ -282,7 +283,7 @@ def pseudo_label(args, l3cube_train_examples, is_fraction, is_random):
         random.shuffle(neutral)
         random.shuffle(positive)
         random.shuffle(negative)
-    else:
+    elif not args.pl_all:  # sort only if not pseudo label all
         neutral.sort(key=takeSecond, reverse=True)
         negative.sort(key=takeSecond, reverse=True)
         positive.sort(key=takeSecond, reverse=True)
@@ -294,31 +295,31 @@ def pseudo_label(args, l3cube_train_examples, is_fraction, is_random):
     new_examples = []
     new_examples_dict = {}
     
-    sents_per_class = 2500
+    sents_per_class = args.sents_per_class
     # sents_per_class = 5800
     
     for _,prob,index in neutral:
         if l3cube_train_examples[index] not in new_examples_dict:
-            if len(l3cube_train_examples[index].split()) >= 5:
+            if len(l3cube_train_examples[index].split()) > 10:  # only allowing texts with > 10 words
                 new_examples.append({"text": l3cube_train_examples[index], "label": "neutral", "prob": prob})
                 new_examples_dict[l3cube_train_examples[index]] = 1
-                if len(new_examples)  == sents_per_class:
+                if len(new_examples)  == sents_per_class and not args.pl_all:
                     break
     
     for _,prob,index in positive:
         if l3cube_train_examples[index] not in new_examples_dict:
-            if len(l3cube_train_examples[index].split()) >= 5:
+            if len(l3cube_train_examples[index].split()) > 10:
                 new_examples.append({"text": l3cube_train_examples[index], "label": "positive", "prob": prob})
                 new_examples_dict[l3cube_train_examples[index]] = 1
-                if len(new_examples)  == sents_per_class*2:
+                if len(new_examples)  == sents_per_class*2 and not args.pl_all:
                     break
     
     for _,prob,index in negative:
         if l3cube_train_examples[index] not in new_examples_dict:
-            if len(l3cube_train_examples[index].split()) >= 5:
+            if len(l3cube_train_examples[index].split()) > 10:
                 new_examples.append({"text": l3cube_train_examples[index], "label": "negative", "prob": prob})
                 new_examples_dict[l3cube_train_examples[index]] = 1
-                if len(new_examples)  == sents_per_class*3:
+                if len(new_examples)  == sents_per_class*3 and not args.pl_all:
                     break
 
     print("Time taken 2: {}".format(time.time() - t1))
@@ -369,8 +370,10 @@ def main():
     parser.add_argument("--max_seq_length", default=256, type=int, help="max seq length after tokenization")
     parser.add_argument("--local_rank", default=0, type=int)
     parser.add_argument('--random', action='store_true')
+    parser.add_argument('--pl_all', action='store_true')
     parser.add_argument("--save_file_path", type=str, default='')
     parser.add_argument("--input_file", type=str, default='')
+    parser.add_argument("--sents_per_class", type=int, default=2500)
 
     args = parser.parse_args()
     
