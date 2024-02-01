@@ -1,4 +1,5 @@
 # Copyright (c) Microsoft Corporation. Licensed under the MIT license.
+import time
 import argparse
 import logging
 import random
@@ -131,8 +132,6 @@ def process(sentence):
 def pseudo_label(args, models, train_examples, is_fraction):
     
     print("Fraction bool is {}".format(is_fraction))
-    # print("Random bool is {}".format(is_random))
-    # get label and its probability for each example
     global features
     global model
 
@@ -148,16 +147,8 @@ def pseudo_label(args, models, train_examples, is_fraction):
     
     train_examples = [[json.loads(ex)["texta"], json.loads(ex)["textb"]] for ex in train_examples]
 
-    # # Evaluation
-    # model_ = torch.nn.DataParallel(model)
-    # # model_ = model
-    # print("device is", args.device)
-    # model_.to(args.device)
-
     #create a list of size (no of instances, no. of labels(3), no. of model checkpoints) to store the predicted probabilities
     probs_cart = {}
-    # form batches of size 10,00,000
-    # Convert to Tensors and build dataset
     batch_size = 128
     num_batches = int(len(features)/batch_size)
     print("Number of batches are {}".format(num_batches))
@@ -177,20 +168,12 @@ def pseudo_label(args, models, train_examples, is_fraction):
         with torch.no_grad():
             #evaluate using each of the model checkpoints
             for ckpt in range(args.num_checkpoints):    
-                # model_path = os.path.join(args.saved_model_path, "checkpoint-{}".format(ckpt))
-                # model = models[args.model_type].from_pretrained(model_path)
-                # model_ = torch.nn.DataParallel(model)
-                # # print("device is", args.device)
-                # model_.to(args.device)
-                # model_.eval()
                 model = models[ckpt]
                 for batch in tqdm(eval_dataloader, desc="Evaluating"):
                     batch = tuple(t.to(args.device) for t in batch)
                     inputs = {"input_ids": batch[0],
                                 "attention_mask": batch[1], "labels": batch[2]} #, "token_type_ids": batch[3]}, xlm doesnt use segment ids
-                    outputs = model(**inputs)#, return_dict=False)
-                    # print(outputs)
-                    # exit()
+                    outputs = model(**inputs)
                     prob = m(outputs[1])
 
                     labels = list(torch.argmax(prob, dim=1).cpu().numpy())
@@ -221,12 +204,6 @@ def pseudo_label(args, models, train_examples, is_fraction):
         
         with torch.no_grad():
             for ckpt in range(args.num_checkpoints):     
-                # model_path = os.path.join(args.?, "checkpoint-{}".format(ckpt))
-                # model = models[args.model_type].from_pretrained(model_path)
-                # model_ = torch.nn.DataParallel(model)
-                # # print("device is", args.device)
-                # model_.to(args.device)
-                # model_.eval()
                 model = models[ckpt]
                 for batch in tqdm(eval_dataloader, desc="Evaluating"):
                     batch = tuple(t.to(args.device) for t in batch)
@@ -241,17 +218,16 @@ def pseudo_label(args, models, train_examples, is_fraction):
                     if ckpt == args.best_checkpoint_index - 1 : #best_checkpoint_index:
                         for j,index in enumerate(labels):
                             label_probs.append((index, prob[j][index]))
-                    #record the predicted probabilites of each label
-                    # if ckpt in probs_cart.keys():
-                    #     probs_cart[ckpt] = [[prob[j][0],prob[j][1],prob[j][2]] for j in len(labels)]
-                    # else:
                     probs_cart[ckpt].extend([prob[j][0],prob[j][1],prob[j][2]] for j in range(prob.shape[0]))
+    
     print("Size of prob_cart: ({},{},{})".format(len(probs_cart),len(probs_cart[0]),len(probs_cart[0][0])))
-    #label_probs should have the labels based on the last checkpoint (change this to best later based on eval scores on snli)
+    
+    # label_probs should have the labels based on the last checkpoint (change this to best later based on eval scores on snli)
     print("Finished pseudolabeling(using best checkpoint) and gathering probabilities!")
     print("Length of label probs", len(label_probs))
     #dictionary to list:
     probs_cart_list = [value for key, value in sorted(probs_cart.items())]
+    
     #compute variability scores::
     probs_cart_np =  np.array(probs_cart_list).transpose(1, 2, 0) #N,L*C -> N,L,C
     std_dev = np.std(probs_cart_np, axis=2)  # -> (N,L,)
@@ -280,7 +256,7 @@ def pseudo_label(args, models, train_examples, is_fraction):
         neutral.sort(key=takeThird, reverse=True)
         negative.sort(key=takeThird, reverse=True)
         positive.sort(key=takeThird, reverse=True)
-    else: #ambiguity == "easy":
+    else:
         neutral.sort(key=takeFourth, reverse=True)
         negative.sort(key=takeFourth, reverse=True)
         positive.sort(key=takeFourth, reverse=True)
@@ -418,17 +394,23 @@ def main():
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     main()
+    end_time = time.time()
+    # Calculate the elapsed time
+    elapsed_time = (end_time - start_time)/float(60*60)
 
-# CUDA_VISIBLE_DEVICES=4 nohup python self-training/pseudo_label_xnli_cartography.py --model_type xlmr --eval_batch_size 512 --input_file data/snli/pretraining/pretrain_label_enprehypos.csv.pretrain.train.wl --saved_model_path /raid/speech/ashish/TSTG_new/results/xnli/en-ckpt-output  --save_file_path /raid/speech/ashish/TSTG_new/data/snli/zero-shot_ambiguous/expt-3/ambiguous-en.txt --num_checkpoints 15 --best_checkpoint_index 15   > logs-xnli/carto-en-ambiguous &
-# CUDA_VISIBLE_DEVICES=4 nohup python self-training/pseudo_label_xnli_cartography.py --model_type xlmr --eval_batch_size 512 --input_file data/snli/pretraining/pretrain_label_hiprehypos.csv.pretrain.train.wl --saved_model_path /raid/speech/ashish/TSTG_new/results/xnli/hi-ckpt-output  --save_file_path /raid/speech/ashish/TSTG_new/data/snli/zero-shot_ambiguous/expt-2/ambiguous-hi.txt --num_checkpoints 15 --best_checkpoint_index 15  > logs-xnli/carto-hi-ambiguous &
-# CUDA_VISIBLE_DEVICES=7 nohup python self-training/pseudo_label_xnli_cartography.py --model_type xlmr --eval_batch_size 512 --input_file data/snli/pretraining/pretrain_label_urprehypos.csv.pretrain.train.wl --saved_model_path /raid/speech/ashish/TSTG_new/results/xnli/ur-ckpt-output  --save_file_path /raid/speech/ashish/TSTG_new/data/snli/zero-shot_ambiguous/expt-2/ambiguous-ur.txt --num_checkpoints 15 --best_checkpoint_index 15   > logs-xnli/carto-ur-ambiguous &
-# CUDA_VISIBLE_DEVICES=7 nohup python self-training/pseudo_label_xnli_cartography.py --model_type xlmr --eval_batch_size 512 --input_file data/snli/pretraining/pretrain_label_swprehypos.csv.pretrain.train.wl --saved_model_path /raid/speech/ashish/TSTG_new/results/xnli/sw-ckpt-output  --save_file_path /raid/speech/ashish/TSTG_new/data/snli/zero-shot_ambiguous/expt-2/ambiguous-sw.txt --num_checkpoints 15 --best_checkpoint_index 15   > logs-xnli/carto-sw-ambiguous &
+    print(f"Elapsed Time: {elapsed_time} hours")
 
-# CUDA_VISIBLE_DEVICES=3 nohup python self-training/pseudo_label_xnli_cartography.py --model_type xlmr --eval_batch_size 512 --input_file data/snli/pretraining/pretrain_label_enprehypos.csv.pretrain.train.wl --saved_model_path /raid/speech/ashish/TSTG_new/results/xnli/en-ckpt-output  --save_file_path /raid/speech/ashish/TSTG_new/data/snli/zero-shot_easy/expt-3/easy-en.txt --num_checkpoints 15 --best_checkpoint_index 15 --ambiguity easy  > logs-xnli/carto-en-easy &
-# CUDA_VISIBLE_DEVICES=3 nohup python self-training/pseudo_label_xnli_cartography.py --model_type xlmr --eval_batch_size 512 --input_file data/snli/pretraining/pretrain_label_hiprehypos.csv.pretrain.train.wl --saved_model_path /raid/speech/ashish/TSTG_new/results/xnli/hi-ckpt-output  --save_file_path /raid/speech/ashish/TSTG_new/data/snli/zero-shot_easy/expt-2/easy-hi.txt --num_checkpoints 15 --best_checkpoint_index 15 --ambiguity easy > logs-xnli/carto-hi-easy &
-# CUDA_VISIBLE_DEVICES=6 nohup python self-training/pseudo_label_xnli_cartography.py --model_type xlmr --eval_batch_size 512 --input_file data/snli/pretraining/pretrain_label_urprehypos.csv.pretrain.train.wl --saved_model_path /raid/speech/ashish/TSTG_new/results/xnli/ur-ckpt-output  --save_file_path /raid/speech/ashish/TSTG_new/data/snli/zero-shot_easy/expt-2/easy-ur.txt --num_checkpoints 15 --best_checkpoint_index 15  --ambiguity easy > logs-xnli/carto-ur-easy &
-# CUDA_VISIBLE_DEVICES=6 nohup python self-training/pseudo_label_xnli_cartography.py --model_type xlmr --eval_batch_size 512 --input_file data/snli/pretraining/pretrain_label_swprehypos.csv.pretrain.train.wl --saved_model_path /raid/speech/ashish/TSTG_new/results/xnli/sw-ckpt-output  --save_file_path /raid/speech/ashish/TSTG_new/data/snli/zero-shot_easy/expt-2/easy-sw.txt --num_checkpoints 15 --best_checkpoint_index 15  --ambiguity easy > logs-xnli/carto-sw-easy &
+# CUDA_VISIBLE_DEVICES=0 nohup python self-training/pseudo_label_xnli_cartography.py --model_type xlmr --eval_batch_size 512 --input_file data/snli/pretraining/pretrain_label_enprehypos.csv.pretrain.train.wl --saved_model_path /raid/speech/ashish/TSTG_new/results/xnli/en-ckpt-output  --save_file_path /raid/speech/ashish/TSTG_new/data/snli/zero-shot_ambiguous-new/expt-3/ambiguous-en.txt --num_checkpoints 15 --best_checkpoint_index 15   > logs-naacl-xnli/carto-en-ambiguous &
+# CUDA_VISIBLE_DEVICES=7 nohup python self-training/pseudo_label_xnli_cartography.py --model_type xlmr --eval_batch_size 512 --input_file data/snli/pretraining/pretrain_label_hiprehypos.csv.pretrain.train.wl --saved_model_path /raid/speech/ashish/TSTG_new/results/xnli/hi-ckpt-output  --save_file_path /raid/speech/ashish/TSTG_new/data/snli/zero-shot_ambiguous-new/expt-2/ambiguous-hi.txt --num_checkpoints 15 --best_checkpoint_index 15  > logs-naacl-xnli/carto-hi-ambiguous &
+# CUDA_VISIBLE_DEVICES=1 nohup python self-training/pseudo_label_xnli_cartography.py --model_type xlmr --eval_batch_size 512 --input_file data/snli/pretraining/pretrain_label_urprehypos.csv.pretrain.train.wl --saved_model_path /raid/speech/ashish/TSTG_new/results/xnli/ur-ckpt-output  --save_file_path /raid/speech/ashish/TSTG_new/data/snli/zero-shot_ambiguous-new/expt-2/ambiguous-ur.txt --num_checkpoints 15 --best_checkpoint_index 15   > logs-naacl-xnli/carto-ur-ambiguous &
+# CUDA_VISIBLE_DEVICES=3 nohup python self-training/pseudo_label_xnli_cartography.py --model_type xlmr --eval_batch_size 512 --input_file data/snli/pretraining/pretrain_label_swprehypos.csv.pretrain.train.wl --saved_model_path /raid/speech/ashish/TSTG_new/results/xnli/sw-ckpt-output  --save_file_path /raid/speech/ashish/TSTG_new/data/snli/zero-shot_ambiguous-new/expt-2/ambiguous-sw.txt --num_checkpoints 15 --best_checkpoint_index 15   > logs-naacl-xnli/carto-sw-ambiguous &
+
+# CUDA_VISIBLE_DEVICES=3 nohup python self-training/pseudo_label_xnli_cartography.py --model_type xlmr --eval_batch_size 512 --input_file data/snli/pretraining/pretrain_label_enprehypos.csv.pretrain.train.wl --saved_model_path /raid/speech/ashish/TSTG_new/results/xnli/en-ckpt-output  --save_file_path /raid/speech/ashish/TSTG_new/data/snli/zero-shot_easy-new/expt-3/easy-en.txt --num_checkpoints 15 --best_checkpoint_index 15 --ambiguity easy  > logs-naacl-xnli/carto-en-easy &
+# CUDA_VISIBLE_DEVICES=7 nohup python self-training/pseudo_label_xnli_cartography.py --model_type xlmr --eval_batch_size 512 --input_file data/snli/pretraining/pretrain_label_hiprehypos.csv.pretrain.train.wl --saved_model_path /raid/speech/ashish/TSTG_new/results/xnli/hi-ckpt-output  --save_file_path /raid/speech/ashish/TSTG_new/data/snli/zero-shot_easy-new/expt-2/easy-hi.txt --num_checkpoints 15 --best_checkpoint_index 15 --ambiguity easy > logs-naacl-xnli/carto-hi-easy-new &
+# CUDA_VISIBLE_DEVICES=6 nohup python self-training/pseudo_label_xnli_cartography.py --model_type xlmr --eval_batch_size 512 --input_file data/snli/pretraining/pretrain_label_urprehypos.csv.pretrain.train.wl --saved_model_path /raid/speech/ashish/TSTG_new/results/xnli/ur-ckpt-output  --save_file_path /raid/speech/ashish/TSTG_new/data/snli/zero-shot_easy-new/expt-2/easy-ur.txt --num_checkpoints 15 --best_checkpoint_index 15  --ambiguity easy > logs-naacl-xnli/carto-ur-easy &
+# CUDA_VISIBLE_DEVICES=6 nohup python self-training/pseudo_label_xnli_cartography.py --model_type xlmr --eval_batch_size 512 --input_file data/snli/pretraining/pretrain_label_swprehypos.csv.pretrain.train.wl --saved_model_path /raid/speech/ashish/TSTG_new/results/xnli/sw-ckpt-output  --save_file_path /raid/speech/ashish/TSTG_new/data/snli/zero-shot_easy-new/expt-2/easy-sw.txt --num_checkpoints 15 --best_checkpoint_index 15  --ambiguity easy > logs-naacl-xnli/carto-sw-easy &
 
 #export CUBLAS_WORKSPACE_CONFIG=:4096:8 or CUBLAS_WORKSPACE_CONFIG=:16:8
 
@@ -437,4 +419,5 @@ if __name__ == "__main__":
 # /raid/speech/ashish/TSTG_new/data/bnsentiment/pretraining/pretrain_label_en.csv.pretrain.train.wl
 
 # cat file1.txt file2.txt | shuf > shuffled_file.txt
-# cat data/snli/zero-shot_ambiguous/expt-2/ambiguous-sw.bl data/snli/train-sw-bl.tsv | shuf > data/snli/zero-shot_ambiguous/expt-2/train-sw.tsv
+#DONT SHUFFLE!!!!!!
+# cat data/snli/zero-shot_easy/expt-2/easy-ur.bl data/snli/train-ur-bl.tsv | shuf > data/snli/zero-shot_easy/expt-2/train-ur.tsv  
