@@ -16,7 +16,7 @@ inference_model = None
 model = None
 
 
-def generate_domainaware_mnli_hypos(premises):
+def generate_domainaware_mnli_hypos(premises, out_path):
 
     labels = []
     
@@ -30,7 +30,7 @@ def generate_domainaware_mnli_hypos(premises):
     print(len(labels))
 
     print("Length of labels is {}".format(len(labels)))
-    batch_size = 50
+    batch_size = 60
     num_batches = int(len(labels)/batch_size)
     generations = []
 
@@ -57,7 +57,7 @@ def generate_domainaware_mnli_hypos(premises):
 
     generations_dict = {"Texts": generations}
     df = pd.DataFrame(generations_dict)
-    df.to_csv("{}/results/generations_zeroshot_nlihypos.csv".format(repo_path), index=False)
+    df.to_csv(out_path, index=False)
 
 
 
@@ -94,6 +94,7 @@ def main():
     parser.add_argument("--load_finetuned", action="store_true")
     parser.add_argument("--base_model", type=str)
     parser.add_argument("--input_path", type=str)
+    parser.add_argument("--output_path", type=str)
 
     args = parser.parse_args()
     # base_model = "meta-llama/Llama-2-13b-chat-hf"
@@ -142,7 +143,7 @@ def main():
     # random.seed(42)
     # random.shuffle(lines)
 
-    generate_domainaware_mnli_hypos(lines[0:60000])
+    generate_domainaware_mnli_hypos(lines[0:60000], args.output_path)
 
     
 
