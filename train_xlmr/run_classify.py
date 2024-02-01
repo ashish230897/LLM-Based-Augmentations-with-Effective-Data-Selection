@@ -52,6 +52,10 @@ from processors.bnsentiment import BnSentimentProcessor
 from processors.mlheadline import MlHeadlineProcessor
 from processors.hiproduct import HiProductProcessor
 from processors.sst5 import SST5Processor
+from processors.marsentiment import MarSentimentProcessor
+from processors.snli import SnliProcessor
+from processors.semeval import SemevalProcessor
+from processors.gluecos import GluecosProcessor
 
 try:
   from torch.utils.tensorboard import SummaryWriter
@@ -72,7 +76,13 @@ PROCESSORS = {
   'bnsentiment': BnSentimentProcessor,
   'mlheadline': MlHeadlineProcessor,
   'hiproduct': HiProductProcessor,
-  'sst5': SST5Processor
+  'sst5': SST5Processor,
+  'marsentiment': MarSentimentProcessor,
+  'marsentiment_promptonly': MarSentimentProcessor,
+  'snli': SnliProcessor,
+  'snli_promptonly': SnliProcessor,
+  'semeval': SemevalProcessor,
+  'gluecos': GluecosProcessor
 }
 
 
@@ -476,7 +486,7 @@ def load_and_cache_examples(args, task, tokenizer, split='train', language='en',
     logger.info("Creating features from dataset file at %s", args.data_dir)
     label_list = processor.get_labels()
     if split == 'train':
-      examples = processor.get_train_examples(args.data_dir, "train", language)
+      examples = processor.get_train_examples(args.train_dir_path, "train", language)
     elif split == 'swapped':
       examples = processor.get_train_examples(args.data_dir, "swapped", language)
     elif split == 'translate-train':
@@ -536,6 +546,13 @@ def main():
     default=None,
     type=str,
     required=True,
+    help="The input data dir. Should contain the .tsv files (or other data files) for the task.",
+  )
+  parser.add_argument(
+    "--train_dir_path",
+    default=None,
+    type=str,
+    # required=True,
     help="The input data dir. Should contain the .tsv files (or other data files) for the task.",
   )
   parser.add_argument(
@@ -837,6 +854,8 @@ def main():
     logger.info("Evaluate the following checkpoints: %s", checkpoints)
     
     for checkpoint in checkpoints: # both best checkpoint and last checkpoint
+      print("Checkpoint is -----------------------------", checkpoint)
+      
       global_step = checkpoint.split("-")[-1] if len(checkpoints) > 1 else ""
       prefix = checkpoint.split("/")[-1] if checkpoint.find("checkpoint") != -1 else ""
 
