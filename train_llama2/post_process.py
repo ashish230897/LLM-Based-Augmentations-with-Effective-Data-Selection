@@ -118,6 +118,7 @@ def postprocess_labeled(args):
             texts_v2.append(text)
 
     assert len(texts_v2) == len(labels) == len(texts)
+    print(len(texts_v2), len(texts), len(labels))
 
     dict = {"Texts": texts_v2, "Labels": labels}
     df_new = pd.DataFrame(dict)
@@ -127,31 +128,64 @@ def postprocess_labeled(args):
 def xnli_postprocess(args):
 
     df = pd.read_csv(args.input_path)
+    
     texts = list(df["Texts"])
-
-    hypos = []
-    for text in texts:
-        hypo_text = text.split('[/INST]')[1]
-
-        if ":" in hypo_text:
-            hypos.append(hypo_text.split(":")[1])
-        else:
-            hypos.append(hypo_text)
     
     df = pd.read_csv(args.premises_input_path)
     premises = list(df["Texts"])
-    premises_triple = []
-    for pre in premises:
-        premises_triple += [pre]*3
+    labels = ["entailment", "neutral", "contradiction"]
 
-    print(len(premises_triple), len(hypos))
-
-    assert len(premises_triple) == len(hypos)
-
+    hypos, new_premises, new_labels = [], [], []
     
-    dict = {"Premises": premises_triple, "Hypothesis": hypos}
+    for i,text in enumerate(texts):
+        #if "She skied down the mossy meadows and sailed through the calm seas." in text: continue  # ignoring this text
+        hypo_text = text.split('[/INST]')[1]
+
+        if ":" in hypo_text:
+            hypos.append(hypo_text.split(":")[1].replace("\n", ""))
+        else:
+            hypos.append(hypo_text.replace("\n", ""))
+
+        new_premises.append(premises[int(i/3)])
+        new_labels.append(labels[int(i%3)])
+    
+    print(len(premises), len(new_premises), len(hypos))
+
+    assert len(new_premises) == len(hypos) == len(new_labels)
+
+    hypo_dict = {}
+    for i,hypo in enumerate(hypos):
+        hypo_dict[hypo] = [new_premises[i], new_labels[i]]
+
+    #dict = {"Premises": new_premises, "Hypothesis": hypos, "Label": new_labels}
+    dict = {"Hypothesis": hypos}
     df_new = pd.DataFrame(dict)
+    #print(len(list(df_new["Premises"])))
+    
     df_new.to_csv(args.output_path, index=False)
+
+    df = pd.read_csv(args.output_path)
+    print(len(df["Hypothesis"]))
+
+    hypos_new = list(df["Hypothesis"])
+    premises_new, labels_new, hypos = [], [], []
+    for hypo in hypos_new:
+        if hypo in hypo_dict:
+            premises_new.append(hypo_dict[hypo][0])
+            labels_new.append(hypo_dict[hypo][1])
+            hypos.append(hypo)
+        # else:
+        #     premises_new.append("none")
+        #     labels_new.append("none")
+
+    dict = {"Premises": premises_new, "Hypothesis": hypos, "Label": labels_new}
+    df_new = pd.DataFrame(dict)
+    
+    df_new.to_csv(args.output_path, index=False)
+    df = pd.read_csv(args.output_path)
+    print(len(df["Hypothesis"]))
+
+
 
 
 def main():
