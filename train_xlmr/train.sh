@@ -23,6 +23,7 @@ saved_model=$3
 OUTPUT_MODEL_NAME=$4
 TASK=$5
 seed=$6
+train_dir_path=$7
 
 LR=2e-5
 EPOCH=15
@@ -79,4 +80,5 @@ python $PWD/train_xlmr/run_classify.py \
   --save_only_best_checkpoint \
   --overwrite_output_dir \
   --eval_test_set $LC \
-  --seed $seed
+  --seed $seed \
+  --train_dir_path $train_dir_path
