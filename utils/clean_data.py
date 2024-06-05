@@ -20,7 +20,6 @@ def main(input_path, output_path):
     texts = [remove_whitespace(text) for text in texts]
     texts = [re.sub(r'\d+\.\s+', '', text) for text in texts]  # remove full 2. in middle of texts
     
-    
     punctuation_chars = re.escape(string.punctuation)
     pattern = r'\s*([' + punctuation_chars + r'])\s*'
     print("Pattern to remove spaces around punct is", pattern)
