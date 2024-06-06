@@ -8,6 +8,7 @@ from tqdm import tqdm
 import random
 
 model = SentenceTransformer('sentence-transformers/LaBSE', device='cuda')
+neu_length = 0
 
 def clustering_question(data, NUM_CLUSTERS = 15):
 
@@ -55,8 +56,9 @@ def cluster(input_path, class_):
     return length
 
 
-def gather(input_path, class_, neu_length):
+def gather(input_path, class_, length_per_class):
 
+    global neu_length
     df = pd.read_csv("{}.topk.{}.csv".format(input_path, class_))
     texts = list(df["Texts"])
     clusters = list(df["cluster"])
@@ -72,6 +74,8 @@ def gather(input_path, class_, neu_length):
     total_available = 0
     for i in range(25):
         total_available += len(cluster_dict[i])
+    print("Total available sentences are ", total_available)
+    if class_ == "neu": neu_length = total_available
 
     # sort every list in descending order
     print(cluster_dict[0][0])
@@ -82,15 +86,15 @@ def gather(input_path, class_, neu_length):
     total_cnt = 0
     new_texts = []
 
-    if neu_length < 2500 and class_ == "pos":
-        max_len = min(total_available, 2500 + (2500 - neu_length))
+    if neu_length < length_per_class and class_ == "pos":
+        max_len = min(total_available, length_per_class + (length_per_class - neu_length))
     else:
-        max_len = min(total_available, 5000)
+        max_len = min(total_available, length_per_class)
 
 
     curr_index = 0
     while total_cnt < max_len:
-        for i in tqdm(range(25)):
+        for i in range(25):
             if total_cnt >= max_len: break
 
             if len(cluster_dict[i]) > curr_index:
@@ -189,6 +193,7 @@ def form_embeddings(input_path):
     np.save('{}.topk.neg.npy'.format(input_path), np.array(neg))
     np.save('{}.topk.pos.npy'.format(input_path), np.array(pos))
 
+
 def main():
 
     parser = argparse.ArgumentParser()
@@ -211,18 +216,18 @@ def main():
         
     
     # form_embeddings(args.input_path)
-    # neu_length = cluster(args.input_path, "neu")
-    # print("neutral length is ", neu_length)
+    # cluster(args.input_path, "neu")
     # cluster(args.input_path, "neg")
     # cluster(args.input_path, "pos")
     
-    gather(args.input_path, "neu", 0)
-    #gather(args.input_path, "pos", neu_length)
-    gather(args.input_path, "pos", 2500)
-    gather(args.input_path, "neg", 0)
+    gather(args.input_path, "neu", 27500)
+    gather(args.input_path, "pos", 27500)
+    gather(args.input_path, "neg", 27500)
     combine(args.input_path, args.train_path, args.out_path)
 
         
 
 if __name__ == "__main__":
     main()
+    
+# python utils/diverseTopK.py --input_path ./data/marsentiment/diverseK/pretrain_label_en.csv.pretrain.train.pl --train_path ./data/sst5/train-en.tsv --out_path ./data/marsentiment/diverseK/topk/12.5k/train-en.tsv
