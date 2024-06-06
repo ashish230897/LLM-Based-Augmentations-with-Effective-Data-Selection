@@ -74,15 +74,18 @@ MODEL_CLASSES = {
 PROCESSORS = {
   'xnli': XnliProcessor,
   'bnsentiment': BnSentimentProcessor,
+  'bnsentiment_promptonly': BnSentimentProcessor,
   'mlheadline': MlHeadlineProcessor,
   'hiproduct': HiProductProcessor,
+  'hiproduct_promptonly': HiProductProcessor,
   'sst5': SST5Processor,
   'marsentiment': MarSentimentProcessor,
   'marsentiment_promptonly': MarSentimentProcessor,
   'snli': SnliProcessor,
   'snli_promptonly': SnliProcessor,
   'semeval': SemevalProcessor,
-  'gluecos': GluecosProcessor
+  'gluecos': GluecosProcessor,
+  'gluecos_promptonly': GluecosProcessor
 }
 
 
