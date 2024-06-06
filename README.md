@@ -5,7 +5,7 @@ XNLI related data needs to be downloaded in the directory data/xnli/, which shou
 Data related to pre-training should be downloaded in data/xnli/pretraining folder.  
 
 ## Fine tuning llama-2
-Fine tuning code of llama-2 is present in the directory train_llama2
+Fine tuning code of llama-2 is present in the directory train_llama2. Also, the code to generate data for the different tasks using LLAMA-2 is present in this directory.
 
 ## Translation  
 IndicTrans2 can be installed by following this: https://github.com/AI4Bharat/IndicTrans2#installation  
