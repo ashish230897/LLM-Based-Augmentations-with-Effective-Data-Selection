@@ -1,4 +1,4 @@
-# TaskSpecificGenerations  
+# Boosting Zero-Shot Crosslingual Performance using LLM-Based Augmentations with Effective Data Selection
 
 This repo can be used to reproduce results of the paper "Boosting Zero-Shot Crosslingual Performance using LLM-Based Augmentations with Effective Data Selection"
 
