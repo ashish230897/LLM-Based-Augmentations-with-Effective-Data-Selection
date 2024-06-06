@@ -1,4 +1,5 @@
-file = open("./data/snli/zero-shot_topk/expt-2/hard/train-hi.tsv")
+#file = open("./data/snli/zero-shot_topk/expt-2/hard/train-sw.tsv")
+file = open("./data/snli/diverseK/hard/train-en.tsv")
 lines = file.readlines()
 file.close()
 
@@ -15,7 +16,8 @@ for i in range(7500):
         matched_labels.append(label)
 
 
-file = open("./data/snli/zero-shot_topk/expt-2/overlap_hard/train-hi.tsv", "w+")
+#file = open("./data/snli/zero-shot_topk/expt-2/overlap_hard/train-sw.tsv", "w+")
+file = open("./data/snli/diverseK/overlap_hard/train-en.tsv", "w+")
 for i in range(len(matched_labels)):
     file.write(matched_texts[i] + "\t" + matched_labels[i] + "\t" + "1\n")
 
@@ -23,7 +25,8 @@ for i in range(7500, len(lines)):
     file.write(lines[i])
 file.close()
 
-file = open("./data/snli/zero-shot_topk/expt-2/overlap_soft/train-hi.tsv", "w+")
+#file = open("./data/snli/zero-shot_topk/expt-2/overlap_soft/train-sw.tsv", "w+")
+file = open("./data/snli/diverseK/overlap_soft/train-en.tsv", "w+")
 for i in range(len(matched_labels)):
     file.write(matched_texts[i] + "\t" + matched_labels[i] + "\t" + "0\n")
 
